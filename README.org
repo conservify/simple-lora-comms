@@ -1,0 +1,17 @@
+#+TITLE:	README for lora-pi-mcu-test
+#+AUTHOR:	Jacob Lewallen
+#+EMAIL:	jacob@conservify.org
+
+* Overview
+
+* Pins
+
+| Peripheral | Pi (Header #) |
+|------------+---------------|
+| Lora G0    |             7 |
+| Lora SCK   |            23 |
+| Lora MISO  |            21 |
+| Lora MOSI  |            19 |
+| Lora CS    |            22 |
+| Lora RST   |            11 |
+|------------+---------------|
