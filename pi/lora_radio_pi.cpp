@@ -157,6 +157,10 @@ bool LoraRadioPi::isModeRx() {
     return mode == RH_RF95_MODE_RXCONTINUOUS;
 }
 
+bool LoraRadioPi::isAvailable() {
+    return available;
+}
+
 void LoraRadioPi::sendPacket(lora_packet_t *packet) {
     setModeIdle();
 
@@ -212,6 +216,29 @@ void LoraRadioPi::receive() {
         free(raw_packet);
         raw_packet = NULL;
     }
+}
+
+void LoraRadioPi::tick() {
+    lock();
+
+    if (!available) {
+        if (setup()) {
+            setModeRx();
+            available = true;
+        }
+    }
+    else {
+        if (time(NULL) - checkedAt > checkRadioEvery) {
+            available = detectChip();
+            checkedAt = time(NULL);
+        }
+
+        if (isModeStandby()) {
+            setModeRx();
+        }
+    }
+
+    unlock();
 }
 
 raw_packet_t *LoraRadioPi::readRawPacket() {

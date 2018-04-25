@@ -162,6 +162,9 @@ private:
     uint8_t pinReset;
     uint8_t pinDio0;
     uint8_t spiChannel;
+    bool available{ false };
+    uint32_t checkedAt{ 0 };
+    uint32_t checkRadioEvery{ 1000 };
 
 public:
     LoraRadioPi(uint8_t pinCs, uint8_t pinReset, uint8_t pinDio0, uint8_t spiChannel);
@@ -171,9 +174,6 @@ public:
     bool setup();
     bool detectChip();
 
-    void lock();
-    void unlock();
-
     uint8_t getMode();
     void setModeTx();
     void setModeRx();
@@ -181,11 +181,17 @@ public:
 
     bool isModeStandby();
     bool isModeRx();
+    bool isAvailable();
 
     void sendPacket(lora_packet_t *packet);
     void service();
 
+    void tick();
+
 private:
+    void lock();
+    void unlock();
+
     int8_t spiRead(int8_t address);
     void spiWrite(int8_t address, int8_t value);
 
