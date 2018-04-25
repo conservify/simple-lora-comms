@@ -2,8 +2,8 @@
 #include <SPI.h>
 #include <RH_RF95.h>
 
-#define RF95_FREQ                                            915.0
-constexpr size_t FK_QUEUE_ENTRY_SIZE = 128;
+constexpr float RF95_FREQ = 915.0;
+constexpr size_t FK_QUEUE_ENTRY_SIZE = 242;
 
 class LoraRadio {
 private:
@@ -127,11 +127,12 @@ void setup() {
     Serial.println("lora-test: Ready");
 
     while (true) {
-        char buffer[] = "Hello, World";
-        if (!radio.send((uint8_t *)buffer, sizeof(buffer))) {
+        const char *buffer = "Hello, World";
+        if (!radio.send((uint8_t *)buffer, strlen(buffer) + 1)) {
             Serial.println("Failed to send");
         }
         else {
+            radio.waitPacketSent();
             Serial.print(".");
         }
         delay(1000);

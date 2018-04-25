@@ -246,18 +246,26 @@ lora_packet_t *lora_packet_create_from(raw_packet_t *raw) {
 }
 
 void log_raw_packet(FILE *fp, raw_packet_t *raw_packet, lora_packet_t *lora_packet) {
-    fprintf(fp, "0x%x,0x%x,0x%x,0x%x,", lora_packet->to, lora_packet->from, lora_packet->id, lora_packet->flags);
+    fprintf(fp, "%02x,%02x,%02x,%02x,", lora_packet->to, lora_packet->from, lora_packet->id, lora_packet->flags);
+    fprintf(fp, "%4d,", raw_packet->packet_rssi);
+    fprintf(fp, "%4d,", raw_packet->rssi);
+    fprintf(fp, "%2d,", raw_packet->snr);
+    fprintf(fp, "%d,", (int32_t)raw_packet->size);
     fprintf(fp, "%d,", (int32_t)lora_packet->size);
-    fprintf(fp, "%d,", raw_packet->packet_rssi);
-    fprintf(fp, "%d,", raw_packet->rssi);
-    fprintf(fp, "%d", raw_packet->snr);
+    fprintf(fp, " ");
+
+    #if 1
+    for (auto i = 0; i < lora_packet->size; ++i) {
+        fprintf(fp, "%02x '%c' ", lora_packet->data[i], lora_packet->data[i]);
+    }
     fprintf(fp, "\n");
+    #endif
 }
 
 void radio_receive_packet(radio_t *radio) {
-    raw_packet_t *raw_packet = radio_read_raw_packet(radio);
+    auto raw_packet = radio_read_raw_packet(radio);
     if (raw_packet != NULL) {
-        lora_packet_t *lora_packet = lora_packet_create_from(raw_packet);
+        auto lora_packet = lora_packet_create_from(raw_packet);
         if (lora_packet != NULL) {
             log_raw_packet(stdout, raw_packet, lora_packet);
 
@@ -270,7 +278,7 @@ void radio_receive_packet(radio_t *radio) {
     }
 }
 
-radio_t *radios_for_isr[1];
+radio_t *radios_for_isr[1] = { nullptr };
 
 void handle_isr() {
     radio_t *radio = radios_for_isr[0];
@@ -295,9 +303,9 @@ void handle_isr() {
     pthread_mutex_unlock(&radio->mutex);
 }
 
-#define PIN_SELECT      6
-#define PIN_DIO_0       7
-#define PIN_RESET       0
+constexpr uint8_t PIN_SELECT = 6;
+constexpr uint8_t PIN_DIO_0 = 7;
+constexpr uint8_t PIN_RESET = 0;
 
 radio_t *radio_create(uint8_t number) {
     radio_t *radio = (radio_t *)malloc(sizeof(radio_t));
