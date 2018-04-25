@@ -1,5 +1,10 @@
+GO=env GOOS=linux GOARCH=arm go
+
 default: gitdeps cmake
 	cd build && make
+
+build/golora-arm-test: pi/*.go
+	$(GO) build -o build/golora-arm-test pi/*.go
 
 cmake:
 	mkdir -p build

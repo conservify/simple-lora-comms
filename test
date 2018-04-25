@@ -2,4 +2,4 @@
 
 set -xe
 
-rsync -zvua --exclude build lora-pi-mcu-test fknatpi: && ssh -tt fknatpi "cd lora-pi-mcu-test && make && build/pi/lora-pi-test"
+rsync -zvua --exclude build ../lora-pi-mcu-test fknatpi: && ssh -tt fknatpi "cd lora-pi-mcu-test && make && build/pi/lora-pi-test"
