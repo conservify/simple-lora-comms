@@ -42,31 +42,14 @@ bool LoraRadio::setup() {
 bool LoraRadio::send(uint8_t *packet, uint8_t size) {
     memcpy(sendBuffer, packet, size);
     sendLength = size;
-    tries = 0;
-    return resend();
+    return rf95.send(sendBuffer, sendLength);
 }
 
 bool LoraRadio::sendPacket(ApplicationPacket &packet) {
     auto id = sequence++;
     rf95.setHeaderId(id);
-    logger << "Radio: SEND " << id << " " << packet.kind << " " << packet.deviceId << "\n";
+    logger << "Radio: S " << id << " " << packet.kind << " " << packet.deviceId << "\n";
     return send((uint8_t *)&packet, sizeof(ApplicationPacket));
-}
-
-bool LoraRadio::reply(uint8_t *packet, uint8_t size) {
-    rf95.setHeaderTo(rf95.headerFrom());
-    bool success = send(packet, size);
-    rf95.setHeaderTo(RH_BROADCAST_ADDRESS);
-    return success;
-}
-
-bool LoraRadio::resend() {
-    if (tries == LoraRadioMaximumRetries) {
-        tries = 0;
-        return false;
-    }
-    tries++;
-    return rf95.send(sendBuffer, sendLength);
 }
 
 void LoraRadio::tick() {

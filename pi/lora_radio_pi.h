@@ -168,7 +168,7 @@ public:
     uint8_t getMode();
     void setModeTx();
     void setModeRx() override;
-    void setModeIdle();
+    void setModeIdle() override;
 
     bool isModeRx() override;
 

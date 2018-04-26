@@ -14,12 +14,12 @@ public:
     int32_t snr{ 0 };
 
 public:
-    void clear() {
-        size = 0;
+    uint8_t& operator[] (size_t i) {
+        return data[i];
     }
 
-    uint8_t& operator[] (size_t x) {
-        return data[x];
+    void clear() {
+        size = 0;
     }
 
 };
@@ -139,6 +139,7 @@ enum class NetworkState {
     Starting,
     Idle,
     Listening,
+    Sleeping,
     PingGateway,
     WaitingForPong,
     SendPong,
@@ -149,6 +150,7 @@ inline const char *getStateName(NetworkState state) {
     case NetworkState::Starting: return "Starting";
     case NetworkState::Idle: return "Idle";
     case NetworkState::Listening: return "Listening";
+    case NetworkState::Sleeping: return "Sleeping";
     case NetworkState::PingGateway: return "PingGateway";
     case NetworkState::WaitingForPong: return "WaitingForPong";
     case NetworkState::SendPong: return "SendPong";
@@ -164,11 +166,21 @@ public:
     virtual bool isModeTx() = 0;
     virtual bool isIdle() = 0;
     virtual void setModeRx() = 0;
+    virtual void setModeIdle() = 0;
     virtual bool sendPacket(ApplicationPacket &packet) = 0;
 
 };
 
 class NetworkProtocol {
+protected:
+    static constexpr uint32_t ReceiveWindowLength = 500;
+    static constexpr uint32_t ReplyDelay = 50;
+    static constexpr uint32_t IdleWindowMin = 5000;
+    static constexpr uint32_t IdleWindowMax = 10000;
+    static constexpr uint32_t SleepingWindowMin = 2000;
+    static constexpr uint32_t SleepingWindowMax = 3000;
+    static constexpr uint32_t ListeningWindowLength = 5000;
+
 private:
     PacketRadio *radio;
     NetworkState state{ NetworkState::Starting };
@@ -209,7 +221,7 @@ protected:
         return radio;
     }
 
-    bool sendPacket(ApplicationPacket &packet) {
+    bool sendPacket(ApplicationPacket &&packet) {
         return radio->sendPacket(packet);
     }
 
@@ -245,14 +257,20 @@ public:
         }
         case NetworkState::Listening: {
             getRadio()->setModeRx();
-            if (inStateFor(5000)) {
+            if (inStateFor(ListeningWindowLength)) {
                 transition(NetworkState::PingGateway);
             }
             break;
         }
+        case NetworkState::Sleeping: {
+            getRadio()->setModeIdle();
+            if (isTimerDone()) {
+                transition(NetworkState::Listening);
+            }
+            break;
+        }
         case NetworkState::PingGateway: {
-            auto ping = ApplicationPacket{ PacketKind::Ping, deviceId };
-            sendPacket(ping);
+            sendPacket(ApplicationPacket{ PacketKind::Ping, deviceId });
             transition(NetworkState::WaitingForPong);
             break;
         }
@@ -261,7 +279,7 @@ public:
             }
             else {
                 getRadio()->setModeRx();
-                if (inStateFor(500)) {
+                if (inStateFor(ReceiveWindowLength)) {
                     fklogln("Radio: NO PONG!");
                     transition(NetworkState::Listening);
                 }
@@ -277,15 +295,18 @@ public:
     void push(LoraPacket &lora, ApplicationPacket &packet) {
         auto traffic = packet.deviceId != deviceId;
 
-        logger << "Radio: RECV " << lora.id << " " << packet.kind << " " << packet.deviceId << (traffic ? " TRAFFIC" : "") << "\n";
+        logger << "Radio: R " << lora.id << " " << packet.kind << " " << packet.deviceId << (traffic ? " TRAFFIC" : "") << "\n";
 
         switch (getState()) {
         case NetworkState::Idle: {
             break;
         }
+        case NetworkState::Sleeping: {
+            break;
+        }
         case NetworkState::Listening: {
             if (traffic) {
-                transition(NetworkState::Listening);
+                transition(NetworkState::Sleeping, random(SleepingWindowMin, SleepingWindowMax));
                 return;
             }
             break;
@@ -293,7 +314,7 @@ public:
         case NetworkState::WaitingForPong: {
             switch (packet.kind) {
             case PacketKind::Pong: {
-                transition(NetworkState::Idle, random(5000, 10000));
+                transition(NetworkState::Idle, random(IdleWindowMin, IdleWindowMax));
                 break;
             }
             default: {
@@ -344,15 +365,14 @@ public:
     }
 
     void push(LoraPacket &lora, ApplicationPacket &packet) {
-        logger << "Radio: RECV " << lora.id << " " << packet.kind << " " << packet.deviceId << "\n";
+        logger << "Radio: R " << lora.id << " " << packet.kind << " " << packet.deviceId << "\n";
 
         switch (getState()) {
         case NetworkState::Listening: {
             switch (packet.kind) {
             case PacketKind::Ping: {
-                delay(50);
-                auto pong = ApplicationPacket{ PacketKind::Pong, packet.deviceId };
-                sendPacket(pong);
+                delay(ReplyDelay);
+                sendPacket(ApplicationPacket{ PacketKind::Pong, packet.deviceId });
                 transition(NetworkState::Listening);
                 break;
             }
@@ -369,5 +389,3 @@ public:
     }
 
 };
-
-

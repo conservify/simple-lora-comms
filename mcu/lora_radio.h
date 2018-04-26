@@ -18,7 +18,6 @@ private:
     uint8_t sendLength{ 0 };
     uint8_t recvBuffer[FK_QUEUE_ENTRY_SIZE];
     uint8_t recvLength{ 0 };
-    uint8_t tries{ 0 };
     uint8_t sequence{ 0 };
 
 public:
@@ -54,20 +53,6 @@ public:
     }
 
 private:
-    bool reply(uint8_t *packet, uint8_t size);
-    bool resend();
-
-    uint8_t numberOfTries() {
-        return tries;
-    }
-
-    bool isAvailable() {
-        return available;
-    }
-
-    void wake() {
-    }
-
     void powerOn() {
         if (pinEnable > 0) {
             digitalWrite(pinEnable, HIGH);
@@ -80,23 +65,13 @@ private:
         }
     }
 
-    void idle() {
-        rf95.setModeIdle();
-    }
-
     void reset() {
-        powerOff();
-        delay(10);
-        powerOn();
-        delay(10);
-    }
-
-    void sleep() {
-        rf95.sleep();
-    }
-
-    uint8_t lastRssi() {
-        return rf95.lastRssi();
+        if (pinEnable > 0) {
+            powerOff();
+            delay(10);
+            powerOn();
+            delay(10);
+        }
     }
 
 public:
@@ -114,6 +89,10 @@ public:
 
     bool isIdle() override {
         return getMode() == RHGenericDriver::RHMode::RHModeIdle;
+    }
+
+    void setModeIdle() override {
+        rf95.setModeIdle();
     }
 
     void setModeRx() override {
