@@ -33,6 +33,13 @@ public:
         return *this;
     }
 
+    #ifdef ARDUINO // Ick
+    Logger& operator<<(size_t i) {
+        printf("%d", i);
+        return *this;
+    }
+    #endif
+
     Logger& operator<<(const char *s) {
         printf("%s", s);
         return *this;

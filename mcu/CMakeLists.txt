@@ -5,6 +5,7 @@ if(EXISTS ${ARDUINO_IDE})
   include(ArduinoMinimal)
 
   include_directories(../common)
+  include_directories(../protocol/src)
 
   file(GLOB SOURCE_FILES *.cpp ../common/*.cpp ../protocol/src/*.c)
 

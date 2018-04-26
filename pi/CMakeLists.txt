@@ -7,6 +7,7 @@ if(EXISTS ${WIRINGPI_LIBRARIES})
 
   include_directories(.)
   include_directories(../common)
+  include_directories(../protocol/src)
   include_directories(${WIRINGPI_INCLUDE_DIRS})
 
   include_directories(../gitdeps/nanopb)

@@ -121,10 +121,22 @@ bool LoraRadioPi::isAvailable() {
     return available;
 }
 
-bool LoraRadioPi::sendPacket(ApplicationPacket &packet) {
+bool LoraRadioPi::sendPacket(RadioPacket &packet) {
+    size_t required = 0;
+    if (!pb_get_encoded_size(&required, fk_radio_RadioPacket_fields, packet.forEncode())) {
+        return false;
+    }
+
+    char buffer[required];
+    auto stream = pb_ostream_from_buffer((uint8_t *)buffer, required);
+    if (!pb_encode(&stream, fk_radio_RadioPacket_fields, packet.forEncode())) {
+        return false;
+    }
+
     LoraPacket lora;
-    lora.set(packet);
-    logger << "Radio: S " << lora.id << " " << packet.kind << " " << packet.deviceId << "\n";
+    memcpy(lora.data, buffer, stream.bytes_written);
+    lora.size = stream.bytes_written;
+    logger << "Radio: S " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << " (" << stream.bytes_written << " bytes)\n";
     sendPacket(lora);
     return true;
 }

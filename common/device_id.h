@@ -1,7 +1,7 @@
 #pragma once
 
 struct DeviceId {
-private:
+public:
     uint8_t raw[8] = { 0 };
 
 public:

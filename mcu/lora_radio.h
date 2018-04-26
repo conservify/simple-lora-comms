@@ -25,7 +25,7 @@ public:
     bool setup();
     void tick();
     bool send(uint8_t *packet, uint8_t size);
-    bool sendPacket(ApplicationPacket &packet) override;
+    bool sendPacket(RadioPacket &packet) override;
 
     void waitPacketSent() {
         rf95.waitPacketSent();

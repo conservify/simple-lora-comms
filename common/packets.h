@@ -1,5 +1,9 @@
 #pragma once
 
+#include <pb_encode.h>
+#include <pb_decode.h>
+#include <fk-radio.pb.h>
+
 struct RawPacket {
 public:
     int32_t size{ 0 };
@@ -51,50 +55,103 @@ public:
         flags = raw.data[3];
     }
 
-    template<class T>
-    void set(T &body) {
-        to = 0x00;
-        from = 0xff;
-        memcpy(data, (uint8_t *)&body, sizeof(T));
-        size = sizeof(T);
-    }
-
 };
 
-enum class PacketKind {
-    Ack,
-    Nack,
-    Ping,
-    Pong,
-    Prepare,
-    Data,
-};
-
-inline Logger& operator<<(Logger &log, const PacketKind &kind) {
+inline Logger& operator<<(Logger &log, const fk_radio_PacketKind &kind) {
     switch (kind) {
-    case PacketKind::Ack: return log.print("Ack");
-    case PacketKind::Nack: return log.print("Nack");
-    case PacketKind::Ping: return log.print("Ping");
-    case PacketKind::Pong: return log.print("Pong");
-    case PacketKind::Prepare: return log.print("Prepare");
-    case PacketKind::Data: return log.print("Data");
+    case fk_radio_PacketKind_ACK: return log.print("Ack");
+    case fk_radio_PacketKind_NACK: return log.print("NAck");
+    case fk_radio_PacketKind_PING: return log.print("Ping");
+    case fk_radio_PacketKind_PONG: return log.print("Pong");
+    case fk_radio_PacketKind_PREPARE: return log.print("Prepare");
+    case fk_radio_PacketKind_DATA: return log.print("Data");
     default:
         return log.print("Unknown");
     }
 }
 
-struct ApplicationPacket {
-    PacketKind kind;
+inline bool pb_encode_device_id(pb_ostream_t *stream, const pb_field_t *field, void *const *arg) {
+    auto data = (DeviceId *)*arg;
+
+    if (data == nullptr) {
+        return true;
+    }
+
+    if (!pb_encode_tag_for_field(stream, field)) {
+        return false;
+    }
+
+    if (!pb_encode_varint(stream, 8)) {
+        return false;
+    }
+
+    auto ptr = (uint8_t *)data->raw;
+    if (!pb_write(stream, ptr, 8)) {
+        return false;
+    }
+
+    return true;
+}
+
+inline bool pb_decode_device_id(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+    auto data = (DeviceId *)(*arg);
+
+    if (!pb_read(stream, (pb_byte_t *)data->raw, stream->bytes_left)) {
+        return false;
+    }
+
+    return true;
+}
+
+class RadioPacket {
+private:
+    fk_radio_RadioPacket message = fk_radio_RadioPacket_init_default;
     DeviceId deviceId;
 
-    ApplicationPacket(PacketKind kind) : kind(kind) {
+public:
+    RadioPacket() {
     }
 
-    ApplicationPacket(PacketKind kind, DeviceId deviceId) : kind(kind), deviceId(deviceId) {
+    RadioPacket(fk_radio_PacketKind kind) {
+        message.kind = kind;
     }
 
-    ApplicationPacket(LoraPacket &lora) {
-        assert(lora.size >= (int32_t)sizeof(ApplicationPacket));
-        memcpy((void *)this, (void *)&lora.data, sizeof(ApplicationPacket));
+    RadioPacket(fk_radio_PacketKind kind, DeviceId &deviceId) : deviceId(deviceId) {
+        message.kind = kind;
     }
+
+    RadioPacket(LoraPacket &lora) {
+        auto stream = pb_istream_from_buffer(lora.data, lora.size);
+        if (!pb_decode(&stream, fk_radio_RadioPacket_fields, forDecode())) {
+            fklogln("Unable to decode packet! %d", lora.size);
+        }
+    }
+
+public:
+    void clear() {
+        message = fk_radio_RadioPacket_init_default;
+    }
+
+    DeviceId &getDeviceId() {
+        return deviceId;
+    }
+
+    fk_radio_RadioPacket *forDecode() {
+        message.deviceId.funcs.decode = pb_decode_device_id;
+        message.deviceId.arg = (void *)&deviceId;
+        return &message;
+    }
+
+    fk_radio_RadioPacket *forEncode() {
+        message.deviceId.funcs.encode = pb_encode_device_id;
+        message.deviceId.arg = (void *)&deviceId;
+        return &message;
+    }
+
+    fk_radio_RadioPacket &m() {
+        return message;
+    }
+
+public:
+
 };

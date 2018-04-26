@@ -55,9 +55,7 @@ int32_t main(int32_t argc, const char **argv) {
             auto lora = incoming.front();
             incoming.pop();
 
-            assert(lora.size >= (int32_t)sizeof(ApplicationPacket));
-
-            auto received = ApplicationPacket{ lora };
+            auto received = RadioPacket{ lora };
             protocol.push(lora, received);
         }
 

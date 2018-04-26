@@ -45,11 +45,24 @@ bool LoraRadio::send(uint8_t *packet, uint8_t size) {
     return rf95.send(sendBuffer, sendLength);
 }
 
-bool LoraRadio::sendPacket(ApplicationPacket &packet) {
+bool LoraRadio::sendPacket(RadioPacket &packet) {
     auto id = sequence++;
     rf95.setHeaderId(id);
-    logger << "Radio: S " << id << " " << packet.kind << " " << packet.deviceId << "\n";
-    return send((uint8_t *)&packet, sizeof(ApplicationPacket));
+
+    size_t required = 0;
+    if (!pb_get_encoded_size(&required, fk_radio_RadioPacket_fields, packet.forEncode())) {
+        return false;
+    }
+
+    char buffer[required];
+    auto stream = pb_ostream_from_buffer((uint8_t *)buffer, required);
+    if (!pb_encode(&stream, fk_radio_RadioPacket_fields, packet.forEncode())) {
+        return false;
+    }
+
+    logger << "Radio: S " << id << " " << packet.m().kind << " " << packet.getDeviceId() << " (" << stream.bytes_written << " bytes)\n";
+
+    return send((uint8_t *)buffer, stream.bytes_written);
 }
 
 void LoraRadio::tick() {

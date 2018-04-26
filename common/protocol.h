@@ -70,7 +70,7 @@ public:
     virtual bool isIdle() = 0;
     virtual void setModeRx() = 0;
     virtual void setModeIdle() = 0;
-    virtual bool sendPacket(ApplicationPacket &packet) = 0;
+    virtual bool sendPacket(RadioPacket &packet) = 0;
 
 };
 
@@ -149,7 +149,7 @@ protected:
         return radio;
     }
 
-    bool sendPacket(ApplicationPacket &&packet) {
+    bool sendPacket(RadioPacket &&packet) {
         return radio->sendPacket(packet);
     }
 
@@ -165,7 +165,7 @@ public:
 
 public:
     void tick();
-    void push(LoraPacket &lora, ApplicationPacket &packet);
+    void push(LoraPacket &lora, RadioPacket &packet);
 
 };
 
@@ -176,6 +176,6 @@ public:
 
 public:
     void tick();
-    void push(LoraPacket &lora, ApplicationPacket &packet);
+    void push(LoraPacket &lora, RadioPacket &packet);
 
 };

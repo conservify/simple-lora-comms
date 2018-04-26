@@ -82,13 +82,8 @@ void setup() {
 
         if (radio.hasPacket()) {
             auto lora = radio.getLoraPacket();
-            if (lora.size < sizeof(ApplicationPacket)) {
-                fklogln("lora-test: Malformed packet (%d).", lora.size);
-            }
-            else {
-                auto received = ApplicationPacket{ lora };
-                protocol.push(lora, received);
-            }
+            auto received = RadioPacket{ lora };
+            protocol.push(lora, received);
         }
 
         delay(10);

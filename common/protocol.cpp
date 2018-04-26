@@ -30,7 +30,7 @@ void NodeNetworkProtocol::tick() {
         break;
     }
     case NetworkState::PingGateway: {
-        sendPacket(ApplicationPacket{ PacketKind::Ping, deviceId });
+        sendPacket(RadioPacket{ fk_radio_PacketKind_PING, deviceId });
         transition(NetworkState::WaitingForPong);
         break;
     }
@@ -45,7 +45,7 @@ void NodeNetworkProtocol::tick() {
         break;
     }
     case NetworkState::Prepare: {
-        sendPacket(ApplicationPacket{ PacketKind::Prepare, deviceId });
+        sendPacket(RadioPacket{ fk_radio_PacketKind_PREPARE, deviceId });
         transition(NetworkState::WaitingForReady);
         break;
     }
@@ -66,7 +66,7 @@ void NodeNetworkProtocol::tick() {
         break;
     }
     case NetworkState::SendData: {
-        sendPacket(ApplicationPacket{ PacketKind::Data, deviceId });
+        sendPacket(RadioPacket{ fk_radio_PacketKind_DATA, deviceId });
         transition(NetworkState::WaitingForSendMore);
         break;
     }
@@ -92,10 +92,10 @@ void NodeNetworkProtocol::tick() {
     }
 }
 
-void NodeNetworkProtocol::push(LoraPacket &lora, ApplicationPacket &packet) {
-    auto traffic = packet.deviceId != deviceId;
+void NodeNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
+    auto traffic = packet.getDeviceId() != deviceId;
 
-    logger << "Radio: R " << lora.id << " " << packet.kind << " " << packet.deviceId << (traffic ? " TRAFFIC" : "") << "\n";
+    logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << (traffic ? " TRAFFIC" : "") << "\n";
 
     switch (getState()) {
     case NetworkState::Listening: {
@@ -106,8 +106,8 @@ void NodeNetworkProtocol::push(LoraPacket &lora, ApplicationPacket &packet) {
         break;
     }
     case NetworkState::WaitingForPong: {
-        switch (packet.kind) {
-        case PacketKind::Pong: {
+        switch (packet.m().kind) {
+        case fk_radio_PacketKind_PONG: {
             retries().clear();
             transition(NetworkState::Prepare);
             break;
@@ -116,8 +116,8 @@ void NodeNetworkProtocol::push(LoraPacket &lora, ApplicationPacket &packet) {
         break;
     }
     case NetworkState::WaitingForReady: {
-        switch (packet.kind) {
-        case PacketKind::Ack: {
+        switch (packet.m().kind) {
+        case fk_radio_PacketKind_ACK: {
             retries().clear();
             transition(NetworkState::SendData);
             break;
@@ -126,8 +126,8 @@ void NodeNetworkProtocol::push(LoraPacket &lora, ApplicationPacket &packet) {
         break;
     }
     case NetworkState::WaitingForSendMore: {
-        switch (packet.kind) {
-        case PacketKind::Ack: {
+        switch (packet.m().kind) {
+        case fk_radio_PacketKind_ACK: {
             retries().clear();
             transition(NetworkState::SendData);
             break;
@@ -162,25 +162,25 @@ void GatewayNetworkProtocol::tick() {
     }
 }
 
-void GatewayNetworkProtocol::push(LoraPacket &lora, ApplicationPacket &packet) {
-    logger << "Radio: R " << lora.id << " " << packet.kind << " " << packet.deviceId << "\n";
+void GatewayNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
+    logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << "\n";
 
     switch (getState()) {
     case NetworkState::Listening: {
-        switch (packet.kind) {
-        case PacketKind::Ping: {
+        switch (packet.m().kind) {
+        case fk_radio_PacketKind_PING: {
             delay(ReplyDelay);
-            sendPacket(ApplicationPacket{ PacketKind::Pong, packet.deviceId });
+            sendPacket(RadioPacket{ fk_radio_PacketKind_PONG, packet.getDeviceId() });
             break;
         }
-        case PacketKind::Prepare: {
+        case fk_radio_PacketKind_PREPARE: {
             delay(ReplyDelay);
-            sendPacket(ApplicationPacket{ PacketKind::Ack, packet.deviceId });
+            sendPacket(RadioPacket{ fk_radio_PacketKind_ACK, packet.getDeviceId() });
             break;
         }
-        case PacketKind::Data: {
+        case fk_radio_PacketKind_DATA: {
             delay(ReplyDelay);
-            sendPacket(ApplicationPacket{ PacketKind::Ack, packet.deviceId });
+            sendPacket(RadioPacket{ fk_radio_PacketKind_ACK, packet.getDeviceId() });
             break;
         }
         }
