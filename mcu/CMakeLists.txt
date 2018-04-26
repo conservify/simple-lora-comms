@@ -6,7 +6,7 @@ if(EXISTS ${ARDUINO_IDE})
 
   include_directories(../common)
 
-  file(GLOB SOURCE_FILES *.cpp ../common/*.cpp)
+  file(GLOB SOURCE_FILES *.cpp ../common/*.cpp ../protocol/src/*.c)
 
   set(LIBRARIES SPI Wire)
 

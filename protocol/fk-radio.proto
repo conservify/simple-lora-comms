@@ -1,0 +1,18 @@
+syntax = "proto3";
+package fk_radio;
+
+enum PacketKind {
+  ACK = 0;
+  NACK = 1;
+  PING = 2;
+  PONG = 3;
+  PREPARE = 4;
+  DATA = 5;
+}
+
+message RadioPacket {
+  PacketKind kind = 1;
+  bytes deviceId = 2;
+  int32 size = 3;
+  bytes data = 4;
+}

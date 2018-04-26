@@ -124,6 +124,7 @@ bool LoraRadioPi::isAvailable() {
 bool LoraRadioPi::sendPacket(ApplicationPacket &packet) {
     LoraPacket lora;
     lora.set(packet);
+    logger << "Radio: S " << lora.id << " " << packet.kind << " " << packet.deviceId << "\n";
     sendPacket(lora);
     return true;
 }

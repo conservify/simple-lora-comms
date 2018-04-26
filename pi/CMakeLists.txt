@@ -9,7 +9,9 @@ if(EXISTS ${WIRINGPI_LIBRARIES})
   include_directories(../common)
   include_directories(${WIRINGPI_INCLUDE_DIRS})
 
-  file(GLOB SOURCE_FILES *.cpp ../common/*.cpp)
+  include_directories(../gitdeps/nanopb)
+
+  file(GLOB SOURCE_FILES *.cpp ../common/*.cpp ../protocol/src/*.c ../gitdeps/nanopb/*.c)
 
   add_executable(lora-pi-test ${SOURCE_FILES})
   set_target_properties(lora-pi-test PROPERTIES COMPILE_FLAGS "-Wall -ggdb")

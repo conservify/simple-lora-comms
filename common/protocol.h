@@ -1,163 +1,66 @@
 #pragma once
 
+#include <cstdlib>
 #include <cstdint>
+#include <cstring>
 #include <cassert>
 
 #include "debug.h"
 
-struct RawPacket {
-public:
-    int32_t size{ 0 };
-    uint8_t data[256];
-    int32_t packetRssi{ 0 };
-    int32_t rssi{ 0 };
-    int32_t snr{ 0 };
+#ifdef ARDUINO
+#include <Arduino.h>
+#else
+#include <wiringPi.h>
+#endif
 
-public:
-    uint8_t& operator[] (size_t i) {
-        return data[i];
-    }
-
-    void clear() {
-        size = 0;
-    }
-
-};
-
-struct LoraPacket {
-    static constexpr int32_t SX1272_HEADER_LENGTH = 4;
-
-public:
-    uint8_t to{ 0xff };
-    uint8_t from{ 0xff };
-    uint8_t id{ 0 };
-    uint8_t flags{ 0 };
-    int32_t size{ 0 };
-    uint8_t data[256] = { 0 };
-
-public:
-    LoraPacket() {
-    }
-
-    LoraPacket(RawPacket &raw) {
-        if (raw.size < (int32_t)SX1272_HEADER_LENGTH) {
-            return;
-        }
-        if (raw.size > (int32_t)sizeof(data)) {
-            return;
-        }
-
-        size = raw.size - SX1272_HEADER_LENGTH;
-        memcpy(data, raw.data + SX1272_HEADER_LENGTH, size);
-
-        to = raw.data[0];
-        from = raw.data[1];
-        id = raw.data[2];
-        flags = raw.data[3];
-    }
-
-    template<class T>
-    void set(T &body) {
-        to = 0x00;
-        from = 0xff;
-        memcpy(data, (uint8_t *)&body, sizeof(T));
-        size = sizeof(T);
-    }
-
-};
-
-struct DeviceId {
-private:
-    uint8_t raw[8] = { 0 };
-
-public:
-    uint8_t& operator[] (int32_t i) {
-        return raw[i];
-    }
-
-    uint8_t operator[] (int32_t i) const {
-        return raw[i];
-    }
-
-public:
-    friend Logger& operator<<(Logger &log, const DeviceId &deviceId) {
-        log.printf("%02x%02x%02x%02x%02x%02x%02x%02x",
-                   deviceId[0], deviceId[1], deviceId[2], deviceId[3],
-                   deviceId[4], deviceId[5], deviceId[6], deviceId[7]);
-        return log;
-    }
-};
-
-inline bool operator==(const DeviceId& lhs, const DeviceId& rhs) {
-    for (auto i = 0; i < 8; ++i) {
-        if (lhs[i] != rhs[i]) {
-            return false;
-        }
-    }
-    return true;
+#ifndef ARDUINO
+inline int32_t random(int32_t min, int32_t max) {
+    return (rand() % (max - min)) + min;
 }
+#endif
 
-inline bool operator!=(const DeviceId& lhs, const DeviceId& rhs) {
-    return !(lhs == rhs);
-}
-
-enum class PacketKind {
-    Ack,
-    Ping,
-    Pong,
-    Prepare,
-};
-
-inline Logger& operator<<(Logger &log, const PacketKind &kind) {
-    switch (kind) {
-    case PacketKind::Ack: return log.print("Ack");
-    case PacketKind::Ping: return log.print("Ping");
-    case PacketKind::Pong: return log.print("Pong");
-    case PacketKind::Prepare: return log.print("Prepare");
-    default:
-        return log.print("Unknown");
-    }
-}
-
-struct ApplicationPacket {
-    PacketKind kind;
-    DeviceId deviceId;
-
-    ApplicationPacket(PacketKind kind) : kind(kind) {
-    }
-
-    ApplicationPacket(PacketKind kind, DeviceId deviceId) : kind(kind), deviceId(deviceId) {
-    }
-
-    ApplicationPacket(LoraPacket &lora) {
-        assert(lora.size >= (int32_t)sizeof(ApplicationPacket));
-        memcpy((void *)this, (void *)&lora.data, sizeof(ApplicationPacket));
-    }
-};
+#include "device_id.h"
+#include "packets.h"
 
 enum class NetworkState {
     Starting,
-    Idle,
     Listening,
+    Idle,
     Sleeping,
+
     PingGateway,
     WaitingForPong,
     SendPong,
+
+    Prepare,
+    WaitingForReady,
+    SendData,
+    WaitingForSendMore,
 };
 
 inline const char *getStateName(NetworkState state) {
     switch (state) {
     case NetworkState::Starting: return "Starting";
-    case NetworkState::Idle: return "Idle";
     case NetworkState::Listening: return "Listening";
+    case NetworkState::Idle: return "Idle";
     case NetworkState::Sleeping: return "Sleeping";
+
     case NetworkState::PingGateway: return "PingGateway";
     case NetworkState::WaitingForPong: return "WaitingForPong";
     case NetworkState::SendPong: return "SendPong";
+
+    case NetworkState::Prepare: return "Prepare";
+    case NetworkState::WaitingForReady: return "WaitingForReady";
+    case NetworkState::SendData: return "SendData";
+    case NetworkState::WaitingForSendMore: return "WaitingForSendMore";
     default: {
         return "Unknown";
     }
     }
+}
+
+inline Logger& operator<<(Logger &log, const NetworkState &state) {
+    return log.print(getStateName(state));
 }
 
 class PacketRadio {
@@ -181,11 +84,30 @@ protected:
     static constexpr uint32_t SleepingWindowMax = 3000;
     static constexpr uint32_t ListeningWindowLength = 5000;
 
+    struct RetryCounter {
+        uint8_t counter{ 0 };
+
+        void clear() {
+            counter = 0;
+        }
+
+        bool canRetry() {
+            counter++;
+            if (counter == 3) {
+                counter = 0;
+                return false;
+            }
+            return true;
+        }
+    };
+
+
 private:
     PacketRadio *radio;
     NetworkState state{ NetworkState::Starting };
     uint32_t lastTransitionAt{ 0 };
     uint32_t timerDoneAt{ 0 };
+    RetryCounter retryCounter;
 
 public:
     NetworkProtocol(PacketRadio &radio) : radio(&radio) {
@@ -212,7 +134,13 @@ public:
         return millis() - lastTransitionAt > ms;
     }
 
+public:
+
 protected:
+    RetryCounter &retries() {
+        return retryCounter;
+    }
+
     NetworkState getState() {
         return state;
     }
@@ -227,12 +155,6 @@ protected:
 
 };
 
-#ifndef ARDUINO
-inline int32_t random(int32_t min, int32_t max) {
-    return (rand() % (max - min)) + min;
-}
-#endif
-
 class NodeNetworkProtocol : public NetworkProtocol {
 private:
     DeviceId deviceId;
@@ -242,96 +164,8 @@ public:
     }
 
 public:
-    void tick() {
-        switch (getState()) {
-        case NetworkState::Starting: {
-            transition(NetworkState::Listening);
-            break;
-        }
-        case NetworkState::Idle: {
-            getRadio()->setModeRx();
-            if (isTimerDone()) {
-                transition(NetworkState::Listening);
-            }
-            break;
-        }
-        case NetworkState::Listening: {
-            getRadio()->setModeRx();
-            if (inStateFor(ListeningWindowLength)) {
-                transition(NetworkState::PingGateway);
-            }
-            break;
-        }
-        case NetworkState::Sleeping: {
-            getRadio()->setModeIdle();
-            if (isTimerDone()) {
-                transition(NetworkState::Listening);
-            }
-            break;
-        }
-        case NetworkState::PingGateway: {
-            sendPacket(ApplicationPacket{ PacketKind::Ping, deviceId });
-            transition(NetworkState::WaitingForPong);
-            break;
-        }
-        case NetworkState::WaitingForPong: {
-            if (getRadio()->isModeTx()) {
-            }
-            else {
-                getRadio()->setModeRx();
-                if (inStateFor(ReceiveWindowLength)) {
-                    fklogln("Radio: NO PONG!");
-                    transition(NetworkState::Listening);
-                }
-            }
-            break;
-        }
-        default: {
-            break;
-        }
-        }
-    }
-
-    void push(LoraPacket &lora, ApplicationPacket &packet) {
-        auto traffic = packet.deviceId != deviceId;
-
-        logger << "Radio: R " << lora.id << " " << packet.kind << " " << packet.deviceId << (traffic ? " TRAFFIC" : "") << "\n";
-
-        switch (getState()) {
-        case NetworkState::Idle: {
-            break;
-        }
-        case NetworkState::Sleeping: {
-            break;
-        }
-        case NetworkState::Listening: {
-            if (traffic) {
-                transition(NetworkState::Sleeping, random(SleepingWindowMin, SleepingWindowMax));
-                return;
-            }
-            break;
-        }
-        case NetworkState::WaitingForPong: {
-            switch (packet.kind) {
-            case PacketKind::Pong: {
-                transition(NetworkState::Idle, random(IdleWindowMin, IdleWindowMax));
-                break;
-            }
-            default: {
-                break;
-            }
-            }
-            break;
-        }
-        default: {
-            break;
-        }
-        }
-
-        #ifdef ARDUINO
-        randomSeed(millis());
-        #endif
-    }
+    void tick();
+    void push(LoraPacket &lora, ApplicationPacket &packet);
 
 };
 
@@ -341,51 +175,7 @@ public:
     }
 
 public:
-    void tick() {
-        switch (getState()) {
-        case NetworkState::Starting: {
-            transition(NetworkState::Listening);
-            break;
-        }
-        case NetworkState::Idle: {
-            getRadio()->setModeRx();
-            break;
-        }
-        case NetworkState::Listening: {
-            getRadio()->setModeRx();
-            break;
-        }
-        case NetworkState::SendPong: {
-            break;
-        }
-        default: {
-            break;
-        }
-        }
-    }
-
-    void push(LoraPacket &lora, ApplicationPacket &packet) {
-        logger << "Radio: R " << lora.id << " " << packet.kind << " " << packet.deviceId << "\n";
-
-        switch (getState()) {
-        case NetworkState::Listening: {
-            switch (packet.kind) {
-            case PacketKind::Ping: {
-                delay(ReplyDelay);
-                sendPacket(ApplicationPacket{ PacketKind::Pong, packet.deviceId });
-                transition(NetworkState::Listening);
-                break;
-            }
-            default: {
-                break;
-            }
-            }
-            break;
-        }
-        default: {
-            break;
-        }
-        }
-    }
+    void tick();
+    void push(LoraPacket &lora, ApplicationPacket &packet);
 
 };
