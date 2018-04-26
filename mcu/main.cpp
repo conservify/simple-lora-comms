@@ -1,25 +1,42 @@
 #include <cstdarg>
 
 #include <Arduino.h>
+#include <Wire.h>
 
 #include "lora_radio.h"
 #include "protocol.h"
+#include "debug.h"
 
-constexpr size_t FK_DEBUG_LINE_MAX = 256;
+class MacAddressEeprom {
+private:
+    TwoWire *bus;
+    uint8_t address{ 0x50 };
 
-void fklog(const char *f, ...) {
-    char buffer[FK_DEBUG_LINE_MAX];
-    va_list args;
+public:
+    MacAddressEeprom(TwoWire &bus) : bus(&bus) {
+    }
 
-    va_start(args, f);
-    vsnprintf(buffer, FK_DEBUG_LINE_MAX, f, args);
-    va_end(args);
+public:
+    bool read128bMac(DeviceId &id) {
+        bus->beginTransmission(address);
+        bus->write(0xf8);
+        if (bus->endTransmission() != 0) {
+            return false;
+        }
 
-    Serial.print(buffer);
-}
+        bus->requestFrom(address, 8);
 
-// 0xD1,0x0B,0x7D,0x76,0xC2,0xE1
-// 0xA6,0x03,0x11,0x03,0x14,0xBD
+        size_t bytes = 0;
+        while (bus->available()) {
+            id[bytes++] = bus->read();
+            if (bytes == 8) {
+                break;
+            }
+        }
+
+        return true;
+    }
+};
 
 void setup() {
     Serial.begin(115200);
@@ -28,14 +45,28 @@ void setup() {
         delay(10);
     }
 
-    Serial.println("lora-test: Hello!");
+    Wire.begin();
+
+    MacAddressEeprom eeprom{ Wire };
+
+    DeviceId id;
+    if (!eeprom.read128bMac(id)) {
+        fklogln("lora-test: No address");
+        while (true);
+    }
+    fklog("lora-test: Address: ");
+    for (auto i = 0; i < 8; ++i) {
+        fklog("%02x", id[i]);
+    }
+    fklogln("");
 
     LoraRadio radio{ 5, 2, 0, 3 };
     if (!radio.setup()) {
+        fklogln("lora-test: No radio");
         while (true);
     }
 
-    Serial.println("lora-test: Ready");
+    fklogln("lora-test: Ready");
 
     pinMode(13, OUTPUT);
 
@@ -43,37 +74,24 @@ void setup() {
     radio.setHeaderFrom(0x00);
     radio.setThisAddress(0x00);
 
+    auto protocol = NodeNetworkProtocol{ id, radio };
+
     while (true) {
-        digitalWrite(13, HIGH);
+        radio.tick();
+        protocol.tick();
 
-        fklog("lora-test: Tx\n");
-
-        fk_lora_packet_t packet{ LoraPacketKind::Ping };
-        if (!radio.send((uint8_t *)&packet, sizeof(fk_lora_packet_t))) {
-            fklog("lora-test: Failed to send\n");
-        }
-        else {
-            radio.waitPacketSent();
-        }
-
-        auto started = millis();
-        while (true) {
-            radio.tick();
-
-            if (radio.hasPacket()) {
-                fklog("lora-test: Got packet! %x %x\n", radio.headerTo(), radio.headerFrom());
-                break;
+        if (radio.hasPacket()) {
+            auto lora = radio.getLoraPacket();
+            if (lora.size < sizeof(ApplicationPacket)) {
+                fklogln("lora-test: Malformed packet (%d).", lora.size);
             }
-
-            if (millis() - started > 1000) {
-                fklog("lora-test: Timeout!\n");
-                break;
+            else {
+                auto received = ApplicationPacket{ lora };
+                protocol.push(lora, received);
             }
         }
 
-        digitalWrite(13, LOW);
-
-        delay(100);
+        delay(10);
     }
 }
 

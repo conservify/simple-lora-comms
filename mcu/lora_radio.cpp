@@ -46,6 +46,13 @@ bool LoraRadio::send(uint8_t *packet, uint8_t size) {
     return resend();
 }
 
+bool LoraRadio::sendPacket(ApplicationPacket &packet) {
+    auto id = sequence++;
+    rf95.setHeaderId(id);
+    logger << "Radio: SEND " << id << " " << packet.kind << " " << packet.deviceId << "\n";
+    return send((uint8_t *)&packet, sizeof(ApplicationPacket));
+}
+
 bool LoraRadio::reply(uint8_t *packet, uint8_t size) {
     rf95.setHeaderTo(rf95.headerFrom());
     bool success = send(packet, size);
@@ -63,11 +70,13 @@ bool LoraRadio::resend() {
 }
 
 void LoraRadio::tick() {
-    if (rf95.available()) {
-        recvLength = sizeof(recvBuffer);
-        rf95.recv(recvBuffer, &recvLength);
-    }
-    else {
-        recvLength = 0;
+    if (isModeRx()) {
+        if (rf95.available()) {
+            recvLength = sizeof(recvBuffer);
+            rf95.recv(recvBuffer, &recvLength);
+        }
+        else {
+            recvLength = 0;
+        }
     }
 }

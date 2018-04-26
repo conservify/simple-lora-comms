@@ -6,24 +6,6 @@
 
 modem_config_t Bw125Cr45Sf128 = { 0x72, 0x74, 0x00};
 
-void log_raw_packet(FILE *fp, RawPacket &raw_packet, LoraPacket &lora_packet) {
-    fprintf(fp, "%02x,%02x,%02x,%02x,", lora_packet.to, lora_packet.from, lora_packet.id, lora_packet.flags);
-    fprintf(fp, "%4d,", raw_packet.packetRssi);
-    fprintf(fp, "%4d,", raw_packet.rssi);
-    fprintf(fp, "%2d,", raw_packet.snr);
-    fprintf(fp, "%d,", (int32_t)raw_packet.size);
-    fprintf(fp, "%d,", (int32_t)lora_packet.size);
-    fprintf(fp, " ");
-
-    #if 1
-    fprintf(fp, "DATA: ");
-    for (auto i = 0; i < lora_packet.size; ++i) {
-        fprintf(fp, "%02x ", lora_packet.data[i]);
-    }
-    #endif
-    fprintf(fp, "\n");
-}
-
 static LoraRadioPi *radios_for_isr[1] = { nullptr };
 
 static void handle_isr() {
@@ -61,13 +43,11 @@ bool LoraRadioPi::begin() {
         return false;
     }
 
-    pthread_mutex_init(&mutex, NULL);
-
     spiWrite(RH_RF95_REG_01_OP_MODE, RH_RF95_MODE_SLEEP | RH_RF95_LONG_RANGE_MODE);
     delay(10);
 
     spiWrite(RH_RF95_REG_0D_FIFO_ADDR_PTR, spiRead(RH_RF95_REG_0F_FIFO_RX_BASE_ADDR));
-    spiWrite(RH_RF95_REG_23_MAX_PAYLOAD_LENGTH, 0x80);
+    spiWrite(RH_RF95_REG_23_MAX_PAYLOAD_LENGTH, 0xF2);
     spiWrite(RH_RF95_REG_0E_FIFO_TX_BASE_ADDR, 0);
     spiWrite(RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0);
 
@@ -141,6 +121,13 @@ bool LoraRadioPi::isAvailable() {
     return available;
 }
 
+bool LoraRadioPi::sendPacket(ApplicationPacket &packet) {
+    LoraPacket lora;
+    lora.set(packet);
+    sendPacket(lora);
+    return true;
+}
+
 void LoraRadioPi::sendPacket(LoraPacket &packet) {
     setModeIdle();
 
@@ -192,8 +179,8 @@ void LoraRadioPi::receive() {
     if (readRawPacket(raw)) {
         LoraPacket lora(raw);
         if (lora.size > 0) {
-            log_raw_packet(stdout, raw, lora);
             incoming.emplace(lora);
+            return;
         }
     }
 }
@@ -238,7 +225,7 @@ bool LoraRadioPi::readRawPacket(RawPacket &raw) {
     return true;
 }
 
-int8_t LoraRadioPi::spiRead(int8_t address) {
+uint8_t LoraRadioPi::spiRead(int8_t address) {
     uint8_t buffer[2];
 
     buffer[0] = address & 0x7F;
@@ -251,7 +238,7 @@ int8_t LoraRadioPi::spiRead(int8_t address) {
     return buffer[1];
 }
 
-void LoraRadioPi::spiWrite(int8_t address, int8_t value) {
+void LoraRadioPi::spiWrite(int8_t address, uint8_t value) {
     uint8_t buffer[2];
 
     buffer[0] = address | 0x80;

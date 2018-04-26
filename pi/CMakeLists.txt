@@ -9,7 +9,9 @@ if(EXISTS ${WIRINGPI_LIBRARIES})
   include_directories(../common)
   include_directories(${WIRINGPI_INCLUDE_DIRS})
 
-  add_executable(lora-pi-test lora-receiver.cpp lora_radio_pi.cpp)
+  file(GLOB SOURCE_FILES *.cpp ../common/*.cpp)
+
+  add_executable(lora-pi-test ${SOURCE_FILES})
   set_target_properties(lora-pi-test PROPERTIES COMPILE_FLAGS "-Wall -ggdb")
   target_link_libraries(lora-pi-test pthread)
   target_link_libraries(lora-pi-test ${WIRINGPI_LIBRARIES})

@@ -1,9 +1,12 @@
 #include <cstdlib>
 #include <cstdio>
+#include <cassert>
+#include <cstdarg>
 
 #include <unistd.h>
 
 #include "lora_radio_pi.h"
+#include "debug.h"
 #include "protocol.h"
 
 constexpr uint8_t PIN_SELECT = 6;
@@ -30,7 +33,7 @@ int32_t main(int32_t argc, const char **argv) {
     wiringPiSetup();
     wiringPiSPISetup(0, 500000);
 
-    printf("Starting...\n");
+    fklogln("Starting...");
 
     LoraRadioPi radio(PIN_SELECT, PIN_RESET, PIN_DIO_0, 0);
 
@@ -41,21 +44,21 @@ int32_t main(int32_t argc, const char **argv) {
     // radio.setHeaderTo(0x00);
     // radio.setHeaderFrom(0xff);
 
+    auto protocol = GatewayNetworkProtocol{ radio };
+
     while (true) {
         radio.tick();
+        protocol.tick();
 
         auto &incoming = radio.getIncoming();
         if (incoming.size() > 0) {
-            delay(5);
-
-            auto message = incoming.front();
-            LoraPacket reply;
-            auto ack = fk_lora_packet_t { LoraPacketKind::Ack };
-            reply.set(ack);
-            radio.sendPacket(reply);
-            radio.waitPacketSent();
-
+            auto lora = incoming.front();
             incoming.pop();
+
+            assert(lora.size >= (int32_t)sizeof(ApplicationPacket));
+
+            auto received = ApplicationPacket{ lora };
+            protocol.push(lora, received);
         }
 
         delay(10);

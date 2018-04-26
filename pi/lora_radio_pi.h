@@ -10,6 +10,8 @@
 #include <wiringPi.h>
 #include <wiringPiSPI.h>
 
+#include "protocol.h"
+
 #define RH_RF95_RSSI_CORRECTION                            157
 
 #define SX1272_HEADER_LENGTH                               4
@@ -133,72 +135,13 @@
 // The Frequency Synthesizer step = RH_RF95_FXOSC / 2^^19
 #define RH_RF95_FSTEP  (RH_RF95_FXOSC / 524288)
 
-struct RawPacket {
-public:
-    int32_t size{ 0 };
-    uint8_t data[256];
-    int32_t packetRssi{ 0 };
-    int32_t rssi{ 0 };
-    int32_t snr{ 0 };
-
-public:
-    void clear() {
-        size = 0;
-    }
-
-    uint8_t& operator[] (size_t x) {
-        return data[x];
-    }
-
-};
-
-struct LoraPacket {
-public:
-    uint8_t to{ 0xff };
-    uint8_t from{ 0xff };
-    uint8_t id{ 0 };
-    uint8_t flags{ 0 };
-    int32_t size{ 0 };
-    uint8_t data[256] = { 0 };
-
-public:
-    LoraPacket() {
-    }
-
-    LoraPacket(RawPacket &raw) {
-        if (raw.size < (int32_t)SX1272_HEADER_LENGTH) {
-            return;
-        }
-        if (raw.size > (int32_t)sizeof(data)) {
-            return;
-        }
-
-        size = raw.size - SX1272_HEADER_LENGTH;
-        memcpy(data, raw.data + SX1272_HEADER_LENGTH, size);
-
-        to = raw.data[0];
-        from = raw.data[1];
-        id = raw.data[2];
-        flags = raw.data[3];
-    }
-
-    template<class T>
-    void set(T &body) {
-        to = 0x00;
-        from = 0xff;
-        memcpy(data, (uint8_t *)&body, sizeof(T));
-        size = sizeof(T);
-    }
-
-};
-
 struct modem_config_t {
     uint8_t reg_1d;
     uint8_t reg_1e;
     uint8_t reg_26;
 };
 
-class LoraRadioPi {
+class LoraRadioPi : public PacketRadio {
 private:
     pthread_mutex_t mutex;
     uint8_t number;
@@ -224,14 +167,24 @@ public:
 
     uint8_t getMode();
     void setModeTx();
-    void setModeRx();
+    void setModeRx() override;
     void setModeIdle();
 
+    bool isModeRx() override;
+
+    bool isModeTx() override {
+        return mode == RH_RF95_MODE_TX;
+    }
+
+    bool isIdle() override {
+        return isModeStandby();
+    }
+
     bool isModeStandby();
-    bool isModeRx();
     bool isAvailable();
     void waitPacketSent();
 
+    bool sendPacket(ApplicationPacket &packet) override;
     void sendPacket(LoraPacket &packet);
     void service();
 
@@ -245,8 +198,8 @@ private:
     void lock();
     void unlock();
 
-    int8_t spiRead(int8_t address);
-    void spiWrite(int8_t address, int8_t value);
+    uint8_t spiRead(int8_t address);
+    void spiWrite(int8_t address, uint8_t value);
 
     void setFrequency(float centre);
     void setModemConfig(modem_config_t *config);

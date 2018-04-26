@@ -6,9 +6,9 @@ if(EXISTS ${ARDUINO_IDE})
 
   include_directories(../common)
 
-  set(SOURCE_FILES main.cpp lora_radio.cpp)
+  file(GLOB SOURCE_FILES *.cpp ../common/*.cpp)
 
-  set(LIBRARIES SPI)
+  set(LIBRARIES SPI Wire)
 
   arduino(lora-mcu-test "${SOURCE_FILES}" "${LIBRARIES}")
 else()
