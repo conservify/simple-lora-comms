@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "protocol.h"
 
 void NodeNetworkProtocol::tick() {
@@ -45,7 +47,9 @@ void NodeNetworkProtocol::tick() {
         break;
     }
     case NetworkState::Prepare: {
-        sendPacket(RadioPacket{ fk_radio_PacketKind_PREPARE, deviceId });
+        auto prepare = RadioPacket{ fk_radio_PacketKind_PREPARE, deviceId };
+        prepare.m().size = 2048;
+        sendPacket(std::move(prepare));
         transition(NetworkState::WaitingForReady);
         break;
     }
