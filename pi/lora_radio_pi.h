@@ -3,6 +3,9 @@
 #include <pthread.h>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
+#include <vector>
+#include <queue>
 
 #include <wiringPi.h>
 #include <wiringPiSPI.h>
@@ -130,21 +133,63 @@
 // The Frequency Synthesizer step = RH_RF95_FXOSC / 2^^19
 #define RH_RF95_FSTEP  (RH_RF95_FXOSC / 524288)
 
-struct raw_packet_t {
-    uint8_t size;
-    uint8_t *data;
-    int32_t packet_rssi;
-    int32_t rssi;
-    int32_t snr;
+struct RawPacket {
+public:
+    int32_t size{ 0 };
+    uint8_t data[256];
+    int32_t packetRssi{ 0 };
+    int32_t rssi{ 0 };
+    int32_t snr{ 0 };
+
+public:
+    void clear() {
+        size = 0;
+    }
+
+    uint8_t& operator[] (size_t x) {
+        return data[x];
+    }
+
 };
 
-struct lora_packet_t {
-    uint8_t size;
-    uint8_t *data;
-    uint8_t to;
-    uint8_t from;
-    uint8_t id;
-    uint8_t flags;
+struct LoraPacket {
+public:
+    uint8_t to{ 0xff };
+    uint8_t from{ 0xff };
+    uint8_t id{ 0 };
+    uint8_t flags{ 0 };
+    int32_t size{ 0 };
+    uint8_t data[256] = { 0 };
+
+public:
+    LoraPacket() {
+    }
+
+    LoraPacket(RawPacket &raw) {
+        if (raw.size < (int32_t)SX1272_HEADER_LENGTH) {
+            return;
+        }
+        if (raw.size > (int32_t)sizeof(data)) {
+            return;
+        }
+
+        size = raw.size - SX1272_HEADER_LENGTH;
+        memcpy(data, raw.data + SX1272_HEADER_LENGTH, size);
+
+        to = raw.data[0];
+        from = raw.data[1];
+        id = raw.data[2];
+        flags = raw.data[3];
+    }
+
+    template<class T>
+    void set(T &body) {
+        to = 0x00;
+        from = 0xff;
+        memcpy(data, (uint8_t *)&body, sizeof(T));
+        size = sizeof(T);
+    }
+
 };
 
 struct modem_config_t {
@@ -165,6 +210,8 @@ private:
     bool available{ false };
     uint32_t checkedAt{ 0 };
     uint32_t checkRadioEvery{ 1000 };
+    std::queue<LoraPacket> incoming;
+    std::queue<LoraPacket> outgoing;
 
 public:
     LoraRadioPi(uint8_t pinCs, uint8_t pinReset, uint8_t pinDio0, uint8_t spiChannel);
@@ -172,6 +219,7 @@ public:
 
 public:
     bool setup();
+    bool begin();
     bool detectChip();
 
     uint8_t getMode();
@@ -182,11 +230,16 @@ public:
     bool isModeStandby();
     bool isModeRx();
     bool isAvailable();
+    void waitPacketSent();
 
-    void sendPacket(lora_packet_t *packet);
+    void sendPacket(LoraPacket &packet);
     void service();
 
     void tick();
+
+    std::queue<LoraPacket>& getIncoming() {
+        return incoming;
+    }
 
 private:
     void lock();
@@ -205,7 +258,7 @@ private:
     int32_t getPacketRssi();
     int32_t getRssi();
 
-    raw_packet_t *readRawPacket();
+    bool readRawPacket(RawPacket &raw);
     void receive();
 
 };

@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include "lora_radio_pi.h"
+#include "protocol.h"
 
 constexpr uint8_t PIN_SELECT = 6;
 constexpr uint8_t PIN_DIO_0 = 7;
@@ -33,10 +34,31 @@ int32_t main(int32_t argc, const char **argv) {
 
     LoraRadioPi radio(PIN_SELECT, PIN_RESET, PIN_DIO_0, 0);
 
+    // This is purely to ensure the mutex inside is ready. This can be forgiving
+    // until you start using the heap, etc...
+    radio.setup();
+
+    // radio.setHeaderTo(0x00);
+    // radio.setHeaderFrom(0xff);
+
     while (true) {
         radio.tick();
 
-        delay(100);
+        auto &incoming = radio.getIncoming();
+        if (incoming.size() > 0) {
+            delay(5);
+
+            auto message = incoming.front();
+            LoraPacket reply;
+            auto ack = fk_lora_packet_t { LoraPacketKind::Ack };
+            reply.set(ack);
+            radio.sendPacket(reply);
+            radio.waitPacketSent();
+
+            incoming.pop();
+        }
+
+        delay(10);
     }
 
     printf("Done.\n");

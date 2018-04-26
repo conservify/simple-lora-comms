@@ -2,49 +2,23 @@
 #include <cstdio>
 
 #include "lora_radio_pi.h"
+#include "protocol.h"
 
 modem_config_t Bw125Cr45Sf128 = { 0x72, 0x74, 0x00};
 
-lora_packet_t *lora_packet_new(size_t size) {
-    auto lora = (lora_packet_t *)malloc(sizeof(lora_packet_t) + size);
-    memset((void *)lora, 0, sizeof(lora_packet_t) + size);
-
-    lora->size = size;
-    lora->data = ((uint8_t *)lora) + sizeof(lora_packet_t);
-    lora->to = 0xff;
-    lora->from = 0xff;
-
-    return lora;
-}
-
-lora_packet_t *lora_packet_create_from(raw_packet_t *raw) {
-    if (raw->size <= SX1272_HEADER_LENGTH) {
-        return NULL;
-    }
-
-    auto lora = (lora_packet_t *)malloc(sizeof(lora_packet_t));
-    lora->size = raw->size - SX1272_HEADER_LENGTH;
-    lora->data = raw->data + SX1272_HEADER_LENGTH;
-    lora->to = raw->data[0];
-    lora->from = raw->data[1];
-    lora->id = raw->data[2];
-    lora->flags = raw->data[3];
-
-    return lora;
-}
-
-void log_raw_packet(FILE *fp, raw_packet_t *raw_packet, lora_packet_t *lora_packet) {
-    fprintf(fp, "%02x,%02x,%02x,%02x,", lora_packet->to, lora_packet->from, lora_packet->id, lora_packet->flags);
-    fprintf(fp, "%4d,", raw_packet->packet_rssi);
-    fprintf(fp, "%4d,", raw_packet->rssi);
-    fprintf(fp, "%2d,", raw_packet->snr);
-    fprintf(fp, "%d,", (int32_t)raw_packet->size);
-    fprintf(fp, "%d,", (int32_t)lora_packet->size);
+void log_raw_packet(FILE *fp, RawPacket &raw_packet, LoraPacket &lora_packet) {
+    fprintf(fp, "%02x,%02x,%02x,%02x,", lora_packet.to, lora_packet.from, lora_packet.id, lora_packet.flags);
+    fprintf(fp, "%4d,", raw_packet.packetRssi);
+    fprintf(fp, "%4d,", raw_packet.rssi);
+    fprintf(fp, "%2d,", raw_packet.snr);
+    fprintf(fp, "%d,", (int32_t)raw_packet.size);
+    fprintf(fp, "%d,", (int32_t)lora_packet.size);
     fprintf(fp, " ");
 
     #if 1
-    for (auto i = 0; i < lora_packet->size; ++i) {
-        fprintf(fp, "%02x '%c' ", lora_packet->data[i], lora_packet->data[i]);
+    fprintf(fp, "DATA: ");
+    for (auto i = 0; i < lora_packet.size; ++i) {
+        fprintf(fp, "%02x ", lora_packet.data[i]);
     }
     #endif
     fprintf(fp, "\n");
@@ -67,6 +41,12 @@ LoraRadioPi::~LoraRadioPi() {
 }
 
 bool LoraRadioPi::setup() {
+    pthread_mutex_init(&mutex, NULL);
+
+    return true;
+}
+
+bool LoraRadioPi::begin() {
     pinMode(pinCs, OUTPUT);
     pinMode(pinDio0, INPUT);
     pinMode(pinReset, OUTPUT);
@@ -161,22 +141,22 @@ bool LoraRadioPi::isAvailable() {
     return available;
 }
 
-void LoraRadioPi::sendPacket(lora_packet_t *packet) {
+void LoraRadioPi::sendPacket(LoraPacket &packet) {
     setModeIdle();
 
     spiWrite(RH_RF95_REG_0E_FIFO_TX_BASE_ADDR, 0);
     spiWrite(RH_RF95_REG_0D_FIFO_ADDR_PTR, 0);
 
-    spiWrite(RH_RF95_REG_00_FIFO, packet->to);
-    spiWrite(RH_RF95_REG_00_FIFO, packet->from);
-    spiWrite(RH_RF95_REG_00_FIFO, packet->id);
-    spiWrite(RH_RF95_REG_00_FIFO, packet->flags);
+    spiWrite(RH_RF95_REG_00_FIFO, packet.to);
+    spiWrite(RH_RF95_REG_00_FIFO, packet.from);
+    spiWrite(RH_RF95_REG_00_FIFO, packet.id);
+    spiWrite(RH_RF95_REG_00_FIFO, packet.flags);
 
-    for (auto i = 0; i < packet->size; ++i) {
-        spiWrite(RH_RF95_REG_00_FIFO, packet->data[i]);
+    for (auto i = 0; i < packet.size; ++i) {
+        spiWrite(RH_RF95_REG_00_FIFO, packet.data[i]);
     }
 
-    spiWrite(RH_RF95_REG_22_PAYLOAD_LENGTH, packet->size + SX1272_HEADER_LENGTH);
+    spiWrite(RH_RF95_REG_22_PAYLOAD_LENGTH, packet.size + SX1272_HEADER_LENGTH);
 
     setModeTx();
 }
@@ -184,7 +164,7 @@ void LoraRadioPi::sendPacket(lora_packet_t *packet) {
 void LoraRadioPi::service() {
     pthread_mutex_lock(&mutex);
 
-    uint8_t flags = spiRead(RH_RF95_REG_12_IRQ_FLAGS);
+    auto flags = spiRead(RH_RF95_REG_12_IRQ_FLAGS);
 
     if ((flags & RH_RF95_PAYLOAD_CRC_ERROR_MASK) == RH_RF95_PAYLOAD_CRC_ERROR_MASK) {
         // Oh no
@@ -202,19 +182,19 @@ void LoraRadioPi::service() {
     pthread_mutex_unlock(&mutex);
 }
 
+void LoraRadioPi::waitPacketSent() {
+    while (!isModeStandby()) {
+    }
+}
+
 void LoraRadioPi::receive() {
-    auto raw_packet = readRawPacket();
-    if (raw_packet != NULL) {
-        auto lora_packet = lora_packet_create_from(raw_packet);
-        if (lora_packet != NULL) {
-            log_raw_packet(stdout, raw_packet, lora_packet);
-
-            free(lora_packet);
-            lora_packet = NULL;
+    RawPacket raw;
+    if (readRawPacket(raw)) {
+        LoraPacket lora(raw);
+        if (lora.size > 0) {
+            log_raw_packet(stdout, raw, lora);
+            incoming.emplace(lora);
         }
-
-        free(raw_packet);
-        raw_packet = NULL;
     }
 }
 
@@ -222,7 +202,7 @@ void LoraRadioPi::tick() {
     lock();
 
     if (!available) {
-        if (setup()) {
+        if (begin()) {
             setModeRx();
             available = true;
         }
@@ -241,25 +221,21 @@ void LoraRadioPi::tick() {
     unlock();
 }
 
-raw_packet_t *LoraRadioPi::readRawPacket() {
+bool LoraRadioPi::readRawPacket(RawPacket &raw) {
     auto currentAddress = spiRead(RH_RF95_REG_10_FIFO_RX_CURRENT_ADDR);
     auto receivedBytes = spiRead(RH_RF95_REG_13_RX_NB_BYTES);
-
-    auto pkt = (raw_packet_t *)malloc(sizeof(raw_packet_t) + receivedBytes + 1);
-    pkt->size = receivedBytes;
-    pkt->data = ((uint8_t *)pkt) + sizeof(raw_packet_t);
 
     spiWrite(RH_RF95_REG_0D_FIFO_ADDR_PTR, currentAddress);
 
     for (auto i = 0; i < receivedBytes; i++) {
-        pkt->data[i] = spiRead(RH_RF95_REG_00_FIFO);
+        raw[i] = spiRead(RH_RF95_REG_00_FIFO);
     }
+    raw.size = receivedBytes;
+    raw.packetRssi = getPacketRssi();
+    raw.rssi = getRssi();
+    raw.snr = getSnr();
 
-    pkt->packet_rssi = getPacketRssi();
-    pkt->rssi = getRssi();
-    pkt->snr = getSnr();
-
-    return pkt;
+    return true;
 }
 
 int8_t LoraRadioPi::spiRead(int8_t address) {

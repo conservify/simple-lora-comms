@@ -6,6 +6,7 @@ if(EXISTS ${WIRINGPI_LIBRARIES})
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
   include_directories(.)
+  include_directories(../common)
   include_directories(${WIRINGPI_INCLUDE_DIRS})
 
   add_executable(lora-pi-test lora-receiver.cpp lora_radio_pi.cpp)

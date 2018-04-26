@@ -4,7 +4,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/../../ar
 if(EXISTS ${ARDUINO_IDE})
   include(ArduinoMinimal)
 
-  set(SOURCE_FILES main.cpp)
+  include_directories(../common)
+
+  set(SOURCE_FILES main.cpp lora_radio.cpp)
 
   set(LIBRARIES SPI)
 
