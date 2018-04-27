@@ -19,4 +19,7 @@ gitdeps:
 clean:
 	rm -rf build
 
+veryclean:
+	rm -rf build gitdeps
+
 .PHONY: protocol
