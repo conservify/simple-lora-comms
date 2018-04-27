@@ -121,7 +121,7 @@ bool LoraRadioPi::isAvailable() {
     return available;
 }
 
-void LoraRadioPi::sendPacket(LoraPacket &packet) {
+bool LoraRadioPi::sendPacket(LoraPacket &packet) {
     setModeIdle();
 
     spiWrite(RH_RF95_REG_0E_FIFO_TX_BASE_ADDR, 0);
@@ -139,6 +139,8 @@ void LoraRadioPi::sendPacket(LoraPacket &packet) {
     spiWrite(RH_RF95_REG_22_PAYLOAD_LENGTH, packet.size + SX1272_HEADER_LENGTH);
 
     setModeTx();
+
+    return true;
 }
 
 void LoraRadioPi::service() {

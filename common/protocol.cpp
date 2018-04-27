@@ -17,6 +17,7 @@ bool NetworkProtocol::sendPacket(RadioPacket &&packet) {
     }
 
     LoraPacket lora;
+    lora.id = sequence;
     memcpy(lora.data, buffer, stream.bytes_written);
     lora.size = stream.bytes_written;
     logger << "Radio: S " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << " (" << stream.bytes_written << " bytes)\n";
@@ -161,6 +162,8 @@ void NodeNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
     case NetworkState::WaitingForReady: {
         switch (packet.m().kind) {
         case fk_radio_PacketKind_ACK: {
+            zeroSequence();
+            bumpSequence();
             retries().clear();
             transition(NetworkState::ReadData);
             break;
@@ -171,6 +174,7 @@ void NodeNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
     case NetworkState::WaitingForSendMore: {
         switch (packet.m().kind) {
         case fk_radio_PacketKind_ACK: {
+            bumpSequence();
             retries().clear();
             transition(NetworkState::ReadData);
             break;
@@ -253,24 +257,29 @@ void GatewayNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
             break;
         }
         case fk_radio_PacketKind_PREPARE: {
-            totalReceived = 0;
             if (writer != nullptr) {
                 writer->close();
                 delete writer;
             }
             writer = new FileWriter("DATA");
+            totalReceived = 0;
+            receiveSequence = 0;
             delay(ReplyDelay);
             sendPacket(RadioPacket{ fk_radio_PacketKind_ACK, packet.getDeviceId() });
             break;
         }
         case fk_radio_PacketKind_DATA: {
             auto data = packet.data();
-            totalReceived += data.size;
-            logger << "Radio: R " << totalReceived << "\n";
-            if (writer != nullptr) {
-                auto written = writer->write(data.ptr, data.size);
-                assert(written == data.size);
+            auto dupe = lora.id <= receiveSequence;
+            if (!dupe) {
+                if (writer != nullptr) {
+                    auto written = writer->write(data.ptr, data.size);
+                    assert(written == data.size);
+                }
+                totalReceived += data.size;
+                receiveSequence = lora.id;
             }
+            logger << "Radio: R " << totalReceived << " " << lora.id << " " << receiveSequence << " " << (dupe ? "DUPE" : "") << "\n";
             delay(ReplyDelay);
             sendPacket(RadioPacket{ fk_radio_PacketKind_ACK, packet.getDeviceId() });
             break;

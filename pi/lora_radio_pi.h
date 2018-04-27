@@ -184,7 +184,7 @@ public:
     bool isAvailable();
     void waitPacketSent();
 
-    void sendPacket(LoraPacket &packet) override;
+    bool sendPacket(LoraPacket &packet) override;
     void service();
 
     void tick();

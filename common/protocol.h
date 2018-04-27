@@ -111,6 +111,7 @@ private:
     NetworkState state{ NetworkState::Starting };
     uint32_t lastTransitionAt{ 0 };
     uint32_t timerDoneAt{ 0 };
+    uint8_t sequence{ 0 };
     RetryCounter retryCounter;
 
 public:
@@ -138,6 +139,14 @@ public:
 
     bool inStateFor(uint32_t ms) {
         return millis() - lastTransitionAt > ms;
+    }
+
+    void zeroSequence() {
+        sequence = 0;
+    }
+
+    void bumpSequence() {
+        sequence++;
     }
 
 public:
@@ -194,6 +203,7 @@ public:
 class GatewayNetworkProtocol : public NetworkProtocol {
 private:
     size_t totalReceived{ 0 };
+    uint8_t receiveSequence{ 0 };
     lws::Writer *writer{ nullptr };
 
 public:
