@@ -1,4 +1,6 @@
+#include <lwstreams/lwstreams.h>
 #include <utility>
+#include <cstdio>
 
 #include "protocol.h"
 
@@ -51,6 +53,10 @@ void NodeNetworkProtocol::tick() {
         prepare.m().size = 2048;
         sendPacket(std::move(prepare));
         transition(NetworkState::WaitingForReady);
+        if (reader != nullptr) {
+            delete reader;
+        }
+        reader = new lws::CountingReader(2048);
         break;
     }
     case NetworkState::WaitingForReady: {
@@ -69,8 +75,22 @@ void NodeNetworkProtocol::tick() {
         }
         break;
     }
+    case NetworkState::ReadData: {
+        auto bp = buffer.toBufferPtr();
+        auto bytes = reader->read(bp.ptr, bp.size);
+        if (bytes < 0) {
+            transition(NetworkState::Idle, random(IdleWindowMin, IdleWindowMax));
+        }
+        else if (bytes > 0) {
+            buffer.setPosition(bytes);
+            transition(NetworkState::SendData);
+        }
+        break;
+    }
     case NetworkState::SendData: {
-        sendPacket(RadioPacket{ fk_radio_PacketKind_DATA, deviceId });
+        auto packet = RadioPacket{ fk_radio_PacketKind_DATA, deviceId };
+        packet.data(buffer.toBufferPtr().ptr, buffer.getPosition());
+        sendPacket(std::move(packet));
         transition(NetworkState::WaitingForSendMore);
         break;
     }
@@ -99,7 +119,7 @@ void NodeNetworkProtocol::tick() {
 void NodeNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
     auto traffic = packet.getDeviceId() != deviceId;
 
-    logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << (traffic ? " TRAFFIC" : "") << "\n";
+    logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << " " << lora.size << (traffic ? " TRAFFIC" : "") << "\n";
 
     switch (getState()) {
     case NetworkState::Listening: {
@@ -123,7 +143,7 @@ void NodeNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
         switch (packet.m().kind) {
         case fk_radio_PacketKind_ACK: {
             retries().clear();
-            transition(NetworkState::SendData);
+            transition(NetworkState::ReadData);
             break;
         }
         }
@@ -133,7 +153,7 @@ void NodeNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
         switch (packet.m().kind) {
         case fk_radio_PacketKind_ACK: {
             retries().clear();
-            transition(NetworkState::SendData);
+            transition(NetworkState::ReadData);
             break;
         }
         }
@@ -141,9 +161,9 @@ void NodeNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
     }
     }
 
-#ifdef ARDUINO
+    #ifdef ARDUINO
     randomSeed(millis());
-#endif
+    #endif
 }
 
 void GatewayNetworkProtocol::tick() {
@@ -166,8 +186,44 @@ void GatewayNetworkProtocol::tick() {
     }
 }
 
+class FileWriter : public lws::Writer {
+private:
+    FILE *fp;
+
+public:
+    FileWriter(const char *fn) {
+        fp = fopen(fn, "w+");
+        if (fp == nullptr) {
+            fklogln("Failed to open %s\n", fn);
+        }
+    }
+
+public:
+    int32_t write(uint8_t *ptr, size_t size) override {
+        auto bytes =  fwrite(ptr, 1, size, fp);
+        fflush(fp);
+        return bytes;
+    }
+
+    int32_t write(uint8_t byte) override {
+        if (fp == nullptr) {
+            return 0;
+        }
+        return fputc(byte, fp);
+    }
+
+    void close() override {
+        if (fp != nullptr) {
+            fflush(fp);
+            fclose(fp);
+            fp = nullptr;
+        }
+    }
+
+};
+
 void GatewayNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
-    logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << "\n";
+    logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << " " << lora.size << "\n";
 
     switch (getState()) {
     case NetworkState::Listening: {
@@ -178,11 +234,24 @@ void GatewayNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
             break;
         }
         case fk_radio_PacketKind_PREPARE: {
+            totalReceived = 0;
+            if (writer != nullptr) {
+                writer->close();
+                delete writer;
+            }
+            writer = new FileWriter("DATA");
             delay(ReplyDelay);
             sendPacket(RadioPacket{ fk_radio_PacketKind_ACK, packet.getDeviceId() });
             break;
         }
         case fk_radio_PacketKind_DATA: {
+            auto data = packet.data();
+            totalReceived += data.size;
+            logger << "Radio: R " << totalReceived << "\n";
+            if (writer != nullptr) {
+                auto written = writer->write(data.ptr, data.size);
+                assert(written == data.size);
+            }
             delay(ReplyDelay);
             sendPacket(RadioPacket{ fk_radio_PacketKind_ACK, packet.getDeviceId() });
             break;

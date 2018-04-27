@@ -70,8 +70,13 @@ inline Logger& operator<<(Logger &log, const fk_radio_PacketKind &kind) {
     }
 }
 
-inline bool pb_encode_device_id(pb_ostream_t *stream, const pb_field_t *field, void *const *arg) {
-    auto data = (DeviceId *)*arg;
+struct pb_data_t {
+    uint8_t *ptr{ nullptr };
+    size_t size{ 0 };
+};
+
+inline bool pb_encode_data(pb_ostream_t *stream, const pb_field_t *field, void *const *arg) {
+    auto data = (pb_data_t *)*arg;
 
     if (data == nullptr) {
         return true;
@@ -81,22 +86,27 @@ inline bool pb_encode_device_id(pb_ostream_t *stream, const pb_field_t *field, v
         return false;
     }
 
-    if (!pb_encode_varint(stream, 8)) {
+    if (!pb_encode_varint(stream, data->size)) {
         return false;
     }
 
-    auto ptr = (uint8_t *)data->raw;
-    if (!pb_write(stream, ptr, 8)) {
+    if (!pb_write(stream, data->ptr, data->size)) {
         return false;
     }
 
     return true;
 }
 
-inline bool pb_decode_device_id(pb_istream_t *stream, const pb_field_t *field, void **arg) {
-    auto data = (DeviceId *)(*arg);
+inline bool pb_decode_data(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+    auto data = (pb_data_t *)(*arg);
 
-    if (!pb_read(stream, (pb_byte_t *)data->raw, stream->bytes_left)) {
+    if (data->ptr == nullptr) {
+        data->ptr = (uint8_t *)malloc(stream->bytes_left);
+    }
+
+    data->size = stream->bytes_left;
+
+    if (!pb_read(stream, (pb_byte_t *)data->ptr, stream->bytes_left)) {
         return false;
     }
 
@@ -107,6 +117,8 @@ class RadioPacket {
 private:
     fk_radio_RadioPacket message = fk_radio_RadioPacket_init_default;
     DeviceId deviceId;
+    pb_data_t deviceIdInfo;
+    pb_data_t dataInfo;
 
 public:
     RadioPacket() {
@@ -128,6 +140,15 @@ public:
     }
 
 public:
+    void data(uint8_t *ptr, size_t size) {
+        dataInfo.ptr = ptr;
+        dataInfo.size = size;
+    }
+
+    pb_data_t data() {
+        return dataInfo;
+    }
+
     void clear() {
         message = fk_radio_RadioPacket_init_default;
     }
@@ -137,14 +158,24 @@ public:
     }
 
     fk_radio_RadioPacket *forDecode() {
-        message.deviceId.funcs.decode = pb_decode_device_id;
-        message.deviceId.arg = (void *)&deviceId;
+        deviceIdInfo.ptr = deviceId.raw;
+        deviceIdInfo.size = 8;
+
+        message.deviceId.funcs.decode = pb_decode_data;
+        message.deviceId.arg = (void *)&deviceIdInfo;
+        message.data.funcs.decode = pb_decode_data;
+        message.data.arg = (void *)&dataInfo;
         return &message;
     }
 
     fk_radio_RadioPacket *forEncode() {
-        message.deviceId.funcs.encode = pb_encode_device_id;
-        message.deviceId.arg = (void *)&deviceId;
+        deviceIdInfo.ptr = deviceId.raw;
+        deviceIdInfo.size = 8;
+
+        message.deviceId.funcs.encode = pb_encode_data;
+        message.deviceId.arg = (void *)&deviceIdInfo;
+        message.data.funcs.encode = pb_encode_data;
+        message.data.arg = (void *)&dataInfo;
         return &message;
     }
 
@@ -153,5 +184,8 @@ public:
     }
 
 public:
+    size_t size() {
+        return dataInfo.size;
+    }
 
 };

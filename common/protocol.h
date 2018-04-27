@@ -5,6 +5,8 @@
 #include <cstring>
 #include <cassert>
 
+#include <lwstreams/lwstreams.h>
+
 #include "debug.h"
 
 #ifdef ARDUINO
@@ -34,6 +36,7 @@ enum class NetworkState {
 
     Prepare,
     WaitingForReady,
+    ReadData,
     SendData,
     WaitingForSendMore,
 };
@@ -51,6 +54,7 @@ inline const char *getStateName(NetworkState state) {
 
     case NetworkState::Prepare: return "Prepare";
     case NetworkState::WaitingForReady: return "WaitingForReady";
+    case NetworkState::ReadData: return "ReadData";
     case NetworkState::SendData: return "SendData";
     case NetworkState::WaitingForSendMore: return "WaitingForSendMore";
     default: {
@@ -76,7 +80,7 @@ public:
 
 class NetworkProtocol {
 protected:
-    static constexpr uint32_t ReceiveWindowLength = 500;
+    static constexpr uint32_t ReceiveWindowLength = 1000;
     static constexpr uint32_t ReplyDelay = 50;
     static constexpr uint32_t IdleWindowMin = 5000;
     static constexpr uint32_t IdleWindowMax = 10000;
@@ -155,9 +159,29 @@ protected:
 
 };
 
+template<size_t Size>
+struct HoldingBuffer {
+    lws::AlignedStorageBuffer<Size> buffer;
+    size_t pos{ 0 };
+
+    lws::BufferPtr toBufferPtr() {
+        return buffer.toBufferPtr();
+    }
+
+    size_t getPosition() {
+        return pos;
+    }
+
+    void setPosition(size_t newPos) {
+        pos = newPos;
+    }
+};
+
 class NodeNetworkProtocol : public NetworkProtocol {
 private:
     DeviceId deviceId;
+    HoldingBuffer<128> buffer;
+    lws::Reader *reader{ nullptr };
 
 public:
     NodeNetworkProtocol(DeviceId &deviceId, PacketRadio &radio) : NetworkProtocol(radio), deviceId(deviceId) {
@@ -170,6 +194,10 @@ public:
 };
 
 class GatewayNetworkProtocol : public NetworkProtocol {
+private:
+    size_t totalReceived{ 0 };
+    lws::Writer *writer{ nullptr };
+
 public:
     GatewayNetworkProtocol(PacketRadio &radio) : NetworkProtocol(radio) {
     }
