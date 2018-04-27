@@ -35,6 +35,8 @@ bool LoraRadio::setup() {
 
     rf95.setTxPower(23, false);
 
+    rf95.spiWrite(RH_RF95_REG_23_MAX_PAYLOAD_LENGTH, 0xF2);
+
     available = true;
     return true;
 }

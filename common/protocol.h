@@ -180,7 +180,7 @@ struct HoldingBuffer {
 class NodeNetworkProtocol : public NetworkProtocol {
 private:
     DeviceId deviceId;
-    HoldingBuffer<128> buffer;
+    HoldingBuffer<242 - 32> buffer;
     lws::Reader *reader{ nullptr };
 
 public:
