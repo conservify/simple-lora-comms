@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#include <lwstreams/streams.h>
+
 #include "lora_radio.h"
 #include "protocol.h"
 #include "debug.h"
