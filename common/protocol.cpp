@@ -4,6 +4,25 @@
 
 #include "protocol.h"
 
+bool NetworkProtocol::sendPacket(RadioPacket &&packet) {
+    size_t required = 0;
+    if (!pb_get_encoded_size(&required, fk_radio_RadioPacket_fields, packet.forEncode())) {
+        return false;
+    }
+
+    char buffer[required];
+    auto stream = pb_ostream_from_buffer((uint8_t *)buffer, required);
+    if (!pb_encode(&stream, fk_radio_RadioPacket_fields, packet.forEncode())) {
+        return false;
+    }
+
+    LoraPacket lora;
+    memcpy(lora.data, buffer, stream.bytes_written);
+    lora.size = stream.bytes_written;
+    logger << "Radio: S " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << " (" << stream.bytes_written << " bytes)\n";
+    return radio->sendPacket(lora);
+}
+
 void NodeNetworkProtocol::tick() {
     switch (getState()) {
     case NetworkState::Starting: {
@@ -82,14 +101,14 @@ void NodeNetworkProtocol::tick() {
             transition(NetworkState::Idle, random(IdleWindowMin, IdleWindowMax));
         }
         else if (bytes > 0) {
-            buffer.setPosition(bytes);
+            buffer.position(bytes);
             transition(NetworkState::SendData);
         }
         break;
     }
     case NetworkState::SendData: {
         auto packet = RadioPacket{ fk_radio_PacketKind_DATA, deviceId };
-        packet.data(buffer.toBufferPtr().ptr, buffer.getPosition());
+        packet.data(buffer.toBufferPtr().ptr, buffer.position());
         sendPacket(std::move(packet));
         transition(NetworkState::WaitingForSendMore);
         break;

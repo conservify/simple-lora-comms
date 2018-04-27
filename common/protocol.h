@@ -74,7 +74,7 @@ public:
     virtual bool isIdle() = 0;
     virtual void setModeRx() = 0;
     virtual void setModeIdle() = 0;
-    virtual bool sendPacket(RadioPacket &packet) = 0;
+    virtual bool sendPacket(LoraPacket &packet) = 0 ;
 
 };
 
@@ -118,6 +118,8 @@ public:
     }
 
 public:
+    bool sendPacket(RadioPacket &&packet);
+
     void transition(NetworkState newState, uint32_t timer = 0) {
         lastTransitionAt = millis();
         fklogln("Radio: %s -> %s", getStateName(state), getStateName(newState));
@@ -153,10 +155,6 @@ protected:
         return radio;
     }
 
-    bool sendPacket(RadioPacket &&packet) {
-        return radio->sendPacket(packet);
-    }
-
 };
 
 template<size_t Size>
@@ -168,11 +166,11 @@ struct HoldingBuffer {
         return buffer.toBufferPtr();
     }
 
-    size_t getPosition() {
+    size_t position() {
         return pos;
     }
 
-    void setPosition(size_t newPos) {
+    void position(size_t newPos) {
         pos = newPos;
     }
 };

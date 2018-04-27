@@ -184,8 +184,7 @@ public:
     bool isAvailable();
     void waitPacketSent();
 
-    bool sendPacket(RadioPacket &packet) override;
-    void sendPacket(LoraPacket &packet);
+    void sendPacket(LoraPacket &packet) override;
     void service();
 
     void tick();

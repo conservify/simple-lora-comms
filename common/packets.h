@@ -7,7 +7,7 @@
 struct RawPacket {
 public:
     int32_t size{ 0 };
-    uint8_t data[256];
+    uint8_t data[255];
     int32_t packetRssi{ 0 };
     int32_t rssi{ 0 };
     int32_t snr{ 0 };
@@ -32,7 +32,7 @@ public:
     uint8_t id{ 0 };
     uint8_t flags{ 0 };
     int32_t size{ 0 };
-    uint8_t data[256] = { 0 };
+    uint8_t data[255] = { 0 };
 
 public:
     LoraPacket() {

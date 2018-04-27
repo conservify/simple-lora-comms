@@ -11,46 +11,25 @@ class LoraRadio : public PacketRadio {
 private:
     RH_RF95 rf95;
     uint8_t pinCs;
-    uint8_t pinRst;
+    uint8_t pinReset;
     uint8_t pinEnable;
     bool available{ false };
-    uint8_t sendBuffer[FK_QUEUE_ENTRY_SIZE];
-    uint8_t sendLength{ 0 };
-    uint8_t recvBuffer[FK_QUEUE_ENTRY_SIZE];
-    uint8_t recvLength{ 0 };
-    uint8_t sequence{ 0 };
 
 public:
-    LoraRadio(uint8_t pinCs, uint8_t pinG0, uint8_t pinEnable, uint8_t pinRst);
+    LoraRadio(uint8_t pinCs, uint8_t pinG0, uint8_t pinEnable, uint8_t pinReset);
     bool setup();
     void tick();
-    bool send(uint8_t *packet, uint8_t size);
-    bool sendPacket(RadioPacket &packet) override;
+    bool sendPacket(LoraPacket &packet) override;
 
     void waitPacketSent() {
         rf95.waitPacketSent();
     }
 
-    bool hasPacket(uint8_t minimum = 0) {
-        return recvLength > minimum;
+    bool hasPacket() {
+        return rf95.available();
     }
 
-    LoraPacket getLoraPacket() {
-        LoraPacket packet;
-        packet.to = headerTo();
-        packet.from = headerFrom();
-        packet.id = headerId();
-        packet.flags = headerFlags();
-        packet.size = recvLength;
-        memcpy(&packet.data, &recvBuffer, recvLength);
-        clear();
-        return packet;
-    }
-
-    void clear() {
-        recvBuffer[0] = 0;
-        recvLength = 0;
-    }
+    LoraPacket getLoraPacket();
 
 private:
     void powerOn() {

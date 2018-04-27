@@ -3,8 +3,8 @@
 constexpr float LoraRadioFrequency = 915.0;
 constexpr uint8_t LoraRadioMaximumRetries = 3;
 
-LoraRadio::LoraRadio(uint8_t pinCs, uint8_t pinG0, uint8_t pinEnable, uint8_t pinRst)
-    : pinCs(pinCs), pinRst(pinRst), rf95(pinCs, pinG0), pinEnable(pinEnable), available(false) {
+LoraRadio::LoraRadio(uint8_t pinCs, uint8_t pinG0, uint8_t pinEnable, uint8_t pinReset)
+    : pinCs(pinCs), pinReset(pinReset), rf95(pinCs, pinG0), pinEnable(pinEnable), available(false) {
 }
 
 bool LoraRadio::setup() {
@@ -15,8 +15,8 @@ bool LoraRadio::setup() {
     pinMode(pinCs, OUTPUT);
     digitalWrite(pinCs, HIGH);
 
-    pinMode(pinRst, OUTPUT);
-    digitalWrite(pinRst, HIGH);
+    pinMode(pinReset, OUTPUT);
+    digitalWrite(pinReset, HIGH);
 
     pinMode(pinEnable, OUTPUT);
     digitalWrite(pinEnable, HIGH);
@@ -41,40 +41,27 @@ bool LoraRadio::setup() {
     return true;
 }
 
-bool LoraRadio::send(uint8_t *packet, uint8_t size) {
-    memcpy(sendBuffer, packet, size);
-    sendLength = size;
-    return rf95.send(sendBuffer, sendLength);
-}
-
-bool LoraRadio::sendPacket(RadioPacket &packet) {
-    size_t required = 0;
-    if (!pb_get_encoded_size(&required, fk_radio_RadioPacket_fields, packet.forEncode())) {
-        return false;
-    }
-
-    char buffer[required];
-    auto stream = pb_ostream_from_buffer((uint8_t *)buffer, required);
-    if (!pb_encode(&stream, fk_radio_RadioPacket_fields, packet.forEncode())) {
-        return false;
-    }
-
-    auto id = sequence++;
-    rf95.setHeaderId(id);
-
-    logger << "Radio: S " << id << " " << packet.m().kind << " " << packet.getDeviceId() << " (" << stream.bytes_written << " bytes)\n";
-
-    return send((uint8_t *)buffer, stream.bytes_written);
+bool LoraRadio::sendPacket(LoraPacket &packet) {
+    rf95.setHeaderTo(packet.to);
+    rf95.setHeaderFrom(packet.from);
+    rf95.setHeaderId(packet.id);
+    rf95.setHeaderFlags(packet.flags);
+    return rf95.send(packet.data, packet.size);
 }
 
 void LoraRadio::tick() {
-    if (isModeRx()) {
-        if (rf95.available()) {
-            recvLength = sizeof(recvBuffer);
-            rf95.recv(recvBuffer, &recvLength);
-        }
-        else {
-            recvLength = 0;
-        }
-    }
+
+}
+
+LoraPacket LoraRadio::getLoraPacket() {
+    LoraPacket packet;
+    packet.to = rf95.headerTo();
+    packet.from = rf95.headerFrom();
+    packet.id = rf95.headerId();
+    packet.flags = rf95.headerFlags();
+    packet.size = sizeof(packet.data);
+    auto size = (uint8_t)sizeof(packet.data);
+    rf95.recv(packet.data, &size);
+    packet.size = size;
+    return packet;
 }
