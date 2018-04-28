@@ -3,6 +3,8 @@
 #include <cstdio>
 
 #include "protocol.h"
+#include "debug.h"
+#include "file_writer.h"
 
 bool NetworkProtocol::sendPacket(RadioPacket &&packet) {
     size_t required = 0;
@@ -209,42 +211,6 @@ void GatewayNetworkProtocol::tick() {
     }
 }
 
-class FileWriter : public lws::Writer {
-private:
-    FILE *fp;
-
-public:
-    FileWriter(const char *fn) {
-        fp = fopen(fn, "w+");
-        if (fp == nullptr) {
-            fklogln("Failed to open %s\n", fn);
-        }
-    }
-
-public:
-    int32_t write(uint8_t *ptr, size_t size) override {
-        auto bytes =  fwrite(ptr, 1, size, fp);
-        fflush(fp);
-        return bytes;
-    }
-
-    int32_t write(uint8_t byte) override {
-        if (fp == nullptr) {
-            return 0;
-        }
-        return fputc(byte, fp);
-    }
-
-    void close() override {
-        if (fp != nullptr) {
-            fflush(fp);
-            fclose(fp);
-            fp = nullptr;
-        }
-    }
-
-};
-
 void GatewayNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
     logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << " " << lora.size << "\n";
 
@@ -261,7 +227,12 @@ void GatewayNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
                 writer->close();
                 delete writer;
             }
-            writer = new FileWriter("DATA");
+            auto fileWriter = new FileWriter("DATA");
+            if (!fileWriter->open()) {
+                delete fileWriter;
+                fileWriter = nullptr;
+            }
+            writer = fileWriter;
             totalReceived = 0;
             receiveSequence = 0;
             delay(ReplyDelay);
