@@ -3,4 +3,4 @@
 set -xe
 
 rsync -zvua --progress ../../fieldkit/lwstreams gitdeps
-rsync -zvua --exclude build ../lora-pi-mcu-test fknatpi: && ssh -tt fknatpi "cd lora-pi-mcu-test && make && build/pi/lora-pi-test"
+rsync -zvua --delete --exclude build ../lora-pi-mcu-test fknatpi: && ssh -tt fknatpi "cd lora-pi-mcu-test && make && build/pi/lora-pi-test"

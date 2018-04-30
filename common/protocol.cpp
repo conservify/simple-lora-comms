@@ -261,7 +261,7 @@ void GatewayNetworkProtocol::tick() {
         break;
     }
     case NetworkState::Idle: {
-        getRadio()->setModeRx();
+        getRadio()->setModeIdle();
         break;
     }
     case NetworkState::Listening: {

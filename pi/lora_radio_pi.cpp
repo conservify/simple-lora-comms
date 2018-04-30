@@ -170,11 +170,6 @@ void LoraRadioPi::service() {
     pthread_mutex_unlock(&mutex);
 }
 
-void LoraRadioPi::waitPacketSent() {
-    while (!isModeStandby()) {
-    }
-}
-
 void LoraRadioPi::receive() {
     RawPacket raw;
     if (readRawPacket(raw)) {

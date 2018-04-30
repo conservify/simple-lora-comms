@@ -183,7 +183,6 @@ public:
 
     bool isModeStandby();
     bool isAvailable();
-    void waitPacketSent();
 
     void setThisAddress(uint8_t address) override;
     bool sendPacket(LoraPacket &packet) override;
