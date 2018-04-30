@@ -109,6 +109,13 @@ void LoraRadioPi::setModeTx() {
     }
 }
 
+void LoraRadioPi::sleep() {
+    if (mode != RH_RF95_MODE_SLEEP) {
+        spiWrite(RH_RF95_REG_01_OP_MODE, RH_RF95_MODE_SLEEP);
+        mode = RH_RF95_MODE_SLEEP;
+    }
+}
+
 bool LoraRadioPi::isModeStandby() {
     return mode == RH_RF95_MODE_STDBY;
 }

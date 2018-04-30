@@ -13,6 +13,7 @@ public:
     virtual bool isIdle() = 0;
     virtual void setModeRx() = 0;
     virtual void setModeIdle() = 0;
+    virtual void sleep() = 0;
     virtual bool sendPacket(LoraPacket &packet) = 0 ;
     virtual void setThisAddress(uint8_t address) = 0;
 

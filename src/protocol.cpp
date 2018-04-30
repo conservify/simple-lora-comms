@@ -98,10 +98,7 @@ void NodeNetworkProtocol::tick() {
         break;
     }
     case NetworkState::Sleeping: {
-        getRadio()->setModeIdle();
-        if (isTimerDone()) {
-            transition(NetworkState::Listening);
-        }
+        getRadio()->sleep();
         break;
     }
     case NetworkState::ListenForSilence: {

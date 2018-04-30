@@ -178,6 +178,7 @@ public:
     bool isModeTx() override {
         return mode == RH_RF95_MODE_TX;
     }
+    void sleep() override;
 
     bool isIdle() override {
         return isModeStandby();

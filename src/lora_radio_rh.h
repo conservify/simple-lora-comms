@@ -30,6 +30,9 @@ public:
     }
 
     bool hasPacket() {
+        if (rf95.mode() != RHGenericDriver::RHMode::RHModeRx) {
+            return false;
+        }
         return rf95.available();
     }
 
@@ -72,6 +75,10 @@ public:
 
     bool isIdle() override {
         return getMode() == RHGenericDriver::RHMode::RHModeIdle;
+    }
+
+    void sleep() override {
+        rf95.sleep();
     }
 
     void setModeIdle() override {
