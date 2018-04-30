@@ -127,9 +127,9 @@ void NodeNetworkProtocol::tick() {
         if (reader != nullptr) {
             delete reader;
         }
-        reader = new lws::CountingReader(2048);
+        reader = new lws::CountingReader(4096);
         auto prepare = RadioPacket{ fk_radio_PacketKind_PREPARE, deviceId };
-        prepare.m().size = 2048;
+        prepare.m().size = 4096;
         sendPacket(std::move(prepare));
         transition(NetworkState::WaitingForReady);
         waitingOnAck.begin();
@@ -212,6 +212,7 @@ void NodeNetworkProtocol::push(LoraPacket &lora) {
         switch (packet.m().kind) {
         case fk_radio_PacketKind_PONG: {
             retries().clear();
+            logger << "Radio: Pong: My address: " << packet.m().address << "\n";
             transition(NetworkState::Prepare);
             break;
         }
@@ -286,7 +287,9 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
         switch (packet.m().kind) {
         case fk_radio_PacketKind_PING: {
             delay(ReplyDelay);
-            sendPacket(RadioPacket{ fk_radio_PacketKind_PONG, packet.getDeviceId() });
+            auto pong = RadioPacket{ fk_radio_PacketKind_PONG, packet.getDeviceId() };
+            pong.m().address = nextAddress++;
+            sendPacket(std::move(pong));
             break;
         }
         case fk_radio_PacketKind_PREPARE: {

@@ -150,6 +150,7 @@ private:
     uint8_t pinReset;
     uint8_t pinDio0;
     uint8_t spiChannel;
+    uint8_t thisAddress{ 0xff };
     bool available{ false };
     uint32_t checkedAt{ 0 };
     uint32_t checkRadioEvery{ 1000 };
@@ -184,6 +185,7 @@ public:
     bool isAvailable();
     void waitPacketSent();
 
+    void setThisAddress(uint8_t address) override;
     bool sendPacket(LoraPacket &packet) override;
     void service();
 

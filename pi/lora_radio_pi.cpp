@@ -123,6 +123,10 @@ bool LoraRadioPi::isAvailable() {
     return available;
 }
 
+void LoraRadioPi::setThisAddress(uint8_t address) {
+    thisAddress = address;
+}
+
 bool LoraRadioPi::sendPacket(LoraPacket &packet) {
     setModeIdle();
 
