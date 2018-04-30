@@ -19,7 +19,7 @@ public:
     }
 
 public:
-    bool read128bMac(DeviceId &id) {
+    bool read128bMac(DeviceIdBuffer &id) {
         bus->beginTransmission(address);
         bus->write(0xf8);
         if (bus->endTransmission() != 0) {
@@ -51,14 +51,14 @@ void setup() {
 
     MacAddressEeprom eeprom{ Wire };
 
-    DeviceId id;
-    if (!eeprom.read128bMac(id)) {
+    DeviceIdBuffer deviceId;
+    if (!eeprom.read128bMac(deviceId)) {
         logger.print("lora-test: No address\n");
         while (true);
     }
     logger.print("lora-test: Address: ");
     for (auto i = 0; i < 8; ++i) {
-        logger.printf("%02x", id[i]);
+        logger.printf("%02x", deviceId[i]);
     }
     logger.print("\n");
 
@@ -76,7 +76,9 @@ void setup() {
     radio.setHeaderFrom(0x00);
     radio.setThisAddress(0x00);
 
-    auto protocol = NodeNetworkProtocol{ id, radio };
+    auto protocol = NodeNetworkProtocol{ radio };
+
+    protocol.setDeviceId(deviceId);
 
     while (true) {
         radio.tick();

@@ -152,12 +152,17 @@ struct HoldingBuffer {
 
 class NodeNetworkProtocol : public NetworkProtocol {
 private:
-    DeviceId deviceId;
+    DeviceIdBuffer deviceId;
     HoldingBuffer<242 - 24> buffer;
     lws::Reader *reader{ nullptr };
 
 public:
-    NodeNetworkProtocol(DeviceId &deviceId, PacketRadio &radio) : NetworkProtocol(radio), deviceId(deviceId) {
+    NodeNetworkProtocol(PacketRadio &radio) : NetworkProtocol(radio) {
+    }
+
+public:
+    void setDeviceId(DeviceIdBuffer &id) {
+        deviceId = id;
     }
 
 public:
