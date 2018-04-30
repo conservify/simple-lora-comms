@@ -1,9 +1,7 @@
-#pragma once
+#ifndef SLC_DEBUG_H_INCLUDED
+#define SLC_DEBUG_H_INCLUDED
 
 #include <cstdarg>
-
-void fklog(const char *f, ...);
-void fklogln(const char *f, ...);
 
 class Logger {
 public:
@@ -48,3 +46,5 @@ public:
 };
 
 extern Logger logger;
+
+#endif

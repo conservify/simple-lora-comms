@@ -1,5 +1,5 @@
-#ifndef FK_LORA_RADIO_RH_INCLUDED
-#define FK_LORA_RADIO_RH_INCLUDED
+#ifndef SLC_LORA_RADIO_RH_INCLUDED
+#define SLC_LORA_RADIO_RH_INCLUDED
 #ifdef ARDUINO
 
 #include <cassert>

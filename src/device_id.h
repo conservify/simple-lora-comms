@@ -1,5 +1,5 @@
-#ifndef FK_DEVICE_ID_H_INCLUDED
-#define FK_DEVICE_ID_H_INCLUDED
+#ifndef SLC_DEVICE_ID_H_INCLUDED
+#define SLC_DEVICE_ID_H_INCLUDED
 
 struct DeviceId {
 public:

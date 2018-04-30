@@ -53,22 +53,22 @@ void setup() {
 
     DeviceId id;
     if (!eeprom.read128bMac(id)) {
-        fklogln("lora-test: No address");
+        logger.print("lora-test: No address\n");
         while (true);
     }
-    fklog("lora-test: Address: ");
+    logger.print("lora-test: Address: ");
     for (auto i = 0; i < 8; ++i) {
-        fklog("%02x", id[i]);
+        logger.printf("%02x", id[i]);
     }
-    fklogln("");
+    logger.print("\n");
 
     LoraRadioRadioHead radio{ 5, 2, 0, 3 };
     if (!radio.setup()) {
-        fklogln("lora-test: No radio");
+        logger.print("lora-test: No radio\n");
         while (true);
     }
 
-    fklogln("lora-test: Ready");
+    logger.print("lora-test: Ready\n");
 
     pinMode(13, OUTPUT);
 

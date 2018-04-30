@@ -1,5 +1,5 @@
-#ifndef FK_FILE_WRITER_H_INCLUDED
-#define FK_FILE_WRITER_H_INCLUDED
+#ifndef SLC_FILE_WRITER_H_INCLUDED
+#define SLC_FILE_WRITER_H_INCLUDED
 
 #include <lwstreams/lwstreams.h>
 

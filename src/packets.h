@@ -1,9 +1,11 @@
-#ifndef FK_PACKETS_H_INCLUDED
-#define FK_PACKETS_H_INCLUDED
+#ifndef SLC_PACKETS_H_INCLUDED
+#define SLC_PACKETS_H_INCLUDED
 
 #include <pb_encode.h>
 #include <pb_decode.h>
 #include <fk-radio.pb.h>
+
+#include "device_id.h"
 
 struct RawPacket {
 public:
@@ -137,7 +139,7 @@ public:
         if (lora.size > 0) {
             auto stream = pb_istream_from_buffer(lora.data, lora.size);
             if (!pb_decode(&stream, fk_radio_RadioPacket_fields, forDecode())) {
-                fklogln("Unable to decode packet! %d", lora.size);
+                logger << "Unable to decode packet! (" << lora.size << "\n";
             }
         }
         else {

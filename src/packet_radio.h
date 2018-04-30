@@ -1,5 +1,5 @@
-#ifndef FK_PACKET_RADIO_H_INCLUDED
-#define FK_PACKET_RADIO_H_INCLUDED
+#ifndef SLC_PACKET_RADIO_H_INCLUDED
+#define SLC_PACKET_RADIO_H_INCLUDED
 
 #include "packets.h"
 

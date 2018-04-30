@@ -53,7 +53,7 @@ bool NetworkProtocol::sendAck(uint8_t toAddress) {
 
 void NetworkProtocol::transition(NetworkState newState, uint32_t timer) {
     lastTransitionAt = millis();
-    fklogln("Radio: %s -> %s", getStateName(state), getStateName(newState));
+    logger << "Radio: " << getStateName(state) << " -> " << getStateName(newState) << "\n";
     state = newState;
     if (timer > 0) {
         timerDoneAt = millis() + timer;
@@ -117,7 +117,7 @@ void NodeNetworkProtocol::tick() {
         if (!getRadio()->isModeTx()) {
             getRadio()->setModeRx();
             if (inStateFor(ReceiveWindowLength)) {
-                fklogln("Radio: FAIL!");
+                logger << "Radio: FAIL!\n";
                 transition(NetworkState::Listening);
             }
         }
@@ -140,11 +140,11 @@ void NodeNetworkProtocol::tick() {
             getRadio()->setModeRx();
             if (inStateFor(ReceiveWindowLength)) {
                 if (retries().canRetry()) {
-                    fklogln("Radio: RETRY!");
+                    logger << "Radio: RETRY!\n";
                     transition(NetworkState::Prepare);
                 }
                 else {
-                    fklogln("Radio: FAIL!");
+                    logger << "Radio: FAIL!\n";
                     transition(NetworkState::Listening);
                 }
             }
@@ -177,11 +177,11 @@ void NodeNetworkProtocol::tick() {
             getRadio()->setModeRx();
             if (inStateFor(ReceiveWindowLength)) {
                 if (retries().canRetry()) {
-                    fklogln("Radio: RETRY!");
+                    logger << "Radio: RETRY!\n";
                     transition(NetworkState::SendData);
                 }
                 else {
-                    fklogln("Radio: FAIL!");
+                    logger << "Radio: FAIL!\n";
                     transition(NetworkState::Listening);
                 }
             }

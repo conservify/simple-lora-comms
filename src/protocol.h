@@ -1,5 +1,5 @@
-#ifndef FK_PROTOCOL_H_INCLUDED
-#define FK_PROTOCOL_H_INCLUDED
+#ifndef SLC_PROTOCOL_H_INCLUDED
+#define SLC_PROTOCOL_H_INCLUDED
 
 #include <cstdlib>
 #include <cstdint>

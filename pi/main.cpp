@@ -33,8 +33,6 @@ int32_t main(int32_t argc, const char **argv) {
     wiringPiSetup();
     wiringPiSPISetup(0, 500000);
 
-    fklogln("Starting...");
-
     LoraRadioPi radio(PIN_SELECT, PIN_RESET, PIN_DIO_0, 0);
 
     // This is purely to ensure the mutex inside is ready. This can be forgiving
@@ -59,8 +57,6 @@ int32_t main(int32_t argc, const char **argv) {
 
         delay(10);
     }
-
-    printf("Done.\n");
 
     return 0;
 

@@ -1,5 +1,5 @@
-#ifndef FK_TIMER_H_INCLUDED
-#define FK_TIMER_H_INCLUDED
+#ifndef SLC_TIMER_H_INCLUDED
+#define SLC_TIMER_H_INCLUDED
 
 #ifdef ARDUINO
 #include <Arduino.h>
