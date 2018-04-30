@@ -5,6 +5,7 @@
 #include "protocol.h"
 
 modem_config_t Bw125Cr45Sf128 = { 0x72, 0x74, 0x00};
+modem_config_t Bw500Cr45Sf128 = { 0x92, 0x74, 0x00};
 
 static LoraRadioPi *radios_for_isr[1] = { nullptr };
 
@@ -54,6 +55,7 @@ bool LoraRadioPi::begin() {
     setModeIdle();
 
     setModemConfig(&Bw125Cr45Sf128);
+    setModemConfig(&Bw500Cr45Sf128);
     setFrequency(915.0f);
     setPreambleLength(8);
     setTxPower(13);
