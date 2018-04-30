@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FK_DEVICE_ID_H_INCLUDED
+#define FK_DEVICE_ID_H_INCLUDED
 
 struct DeviceId {
 public:
@@ -35,3 +36,4 @@ inline bool operator!=(const DeviceId& lhs, const DeviceId& rhs) {
     return !(lhs == rhs);
 }
 
+#endif

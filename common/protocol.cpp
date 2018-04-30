@@ -5,6 +5,10 @@
 #include "protocol.h"
 #include "debug.h"
 #include "file_writer.h"
+#include "timer.h"
+
+static Timer transmitting;
+static Timer waitingOnAck;
 
 bool NetworkProtocol::sendPacket(RadioPacket &&packet) {
     size_t required = 0;
@@ -27,6 +31,14 @@ bool NetworkProtocol::sendPacket(RadioPacket &&packet) {
 }
 
 void NodeNetworkProtocol::tick() {
+    if (getRadio()->isModeTx()) {
+        if (!transmitting.isRunning()) {
+            transmitting.begin();
+        }
+    }
+    else if (transmitting.isRunning()) {
+        transmitting.end();
+    }
     switch (getState()) {
     case NetworkState::Starting: {
         retries().clear();
@@ -71,14 +83,15 @@ void NodeNetworkProtocol::tick() {
         break;
     }
     case NetworkState::Prepare: {
-        auto prepare = RadioPacket{ fk_radio_PacketKind_PREPARE, deviceId };
-        prepare.m().size = 2048;
-        sendPacket(std::move(prepare));
-        transition(NetworkState::WaitingForReady);
         if (reader != nullptr) {
             delete reader;
         }
         reader = new lws::CountingReader(2048);
+        auto prepare = RadioPacket{ fk_radio_PacketKind_PREPARE, deviceId };
+        prepare.m().size = 2048;
+        sendPacket(std::move(prepare));
+        transition(NetworkState::WaitingForReady);
+        waitingOnAck.begin();
         break;
     }
     case NetworkState::WaitingForReady: {
@@ -102,6 +115,7 @@ void NodeNetworkProtocol::tick() {
         auto bytes = reader->read(bp.ptr, bp.size);
         if (bytes < 0) {
             transition(NetworkState::Idle, random(IdleWindowMin, IdleWindowMax));
+            logger << "Done! waitingOnAck: " << waitingOnAck << " transmitting: " << transmitting << "\n";
         }
         else if (bytes > 0) {
             buffer.position(bytes);
@@ -114,6 +128,7 @@ void NodeNetworkProtocol::tick() {
         packet.data(buffer.toBufferPtr().ptr, buffer.position());
         sendPacket(std::move(packet));
         transition(NetworkState::WaitingForSendMore);
+        waitingOnAck.begin();
         break;
     }
     case NetworkState::WaitingForSendMore: {
@@ -164,6 +179,7 @@ void NodeNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
     case NetworkState::WaitingForReady: {
         switch (packet.m().kind) {
         case fk_radio_PacketKind_ACK: {
+            waitingOnAck.end();
             zeroSequence();
             bumpSequence();
             retries().clear();
@@ -176,6 +192,7 @@ void NodeNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
     case NetworkState::WaitingForSendMore: {
         switch (packet.m().kind) {
         case fk_radio_PacketKind_ACK: {
+            waitingOnAck.end();
             bumpSequence();
             retries().clear();
             transition(NetworkState::ReadData);
