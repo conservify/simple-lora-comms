@@ -1,4 +1,6 @@
-#pragma once
+#ifndef FK_LORA_RADIO_PI_INCLUDED
+#define FK_LORA_RADIO_PI_INCLUDED
+#ifndef ARDUINO
 
 #include <pthread.h>
 #include <cstdint>
@@ -215,3 +217,6 @@ private:
     void receive();
 
 };
+
+#endif
+#endif

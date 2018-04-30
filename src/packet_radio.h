@@ -3,6 +3,9 @@
 
 #include "packets.h"
 
+constexpr float LoraRadioFrequency = 915.0;
+constexpr uint8_t LoraRadioMaximumRetries = 3;
+
 class PacketRadio {
 public:
     virtual bool isModeRx() = 0;

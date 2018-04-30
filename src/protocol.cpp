@@ -209,38 +209,29 @@ void NodeNetworkProtocol::push(LoraPacket &lora) {
         break;
     }
     case NetworkState::WaitingForPong: {
-        switch (packet.m().kind) {
-        case fk_radio_PacketKind_PONG: {
+        if (packet.m().kind == fk_radio_PacketKind_PONG) {
             retries().clear();
             logger << "Radio: Pong: My address: " << packet.m().address << "\n";
             transition(NetworkState::Prepare);
-            break;
-        }
         }
         break;
     }
     case NetworkState::WaitingForReady: {
-        switch (packet.m().kind) {
-        case fk_radio_PacketKind_ACK: {
+        if (packet.m().kind == fk_radio_PacketKind_ACK) {
             waitingOnAck.end();
             zeroSequence();
             bumpSequence();
             retries().clear();
             transition(NetworkState::ReadData);
-            break;
-        }
         }
         break;
     }
     case NetworkState::WaitingForSendMore: {
-        switch (packet.m().kind) {
-        case fk_radio_PacketKind_ACK: {
+        if (packet.m().kind == fk_radio_PacketKind_ACK) {
             waitingOnAck.end();
             bumpSequence();
             retries().clear();
             transition(NetworkState::ReadData);
-            break;
-        }
         }
         break;
     }
@@ -315,7 +306,7 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
             if (!dupe) {
                 if (writer != nullptr) {
                     auto written = writer->write(data.ptr, data.size);
-                    assert(written == data.size);
+                    assert(written == (int32_t)data.size);
                 }
                 totalReceived += data.size;
                 receiveSequence = lora.id;
@@ -329,6 +320,9 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
             break;
         }
         }
+        break;
+    }
+    default: {
         break;
     }
     }

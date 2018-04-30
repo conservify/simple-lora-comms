@@ -1,0 +1,6 @@
+#!/bin/bash
+
+set -xe
+
+rsync -zvua --progress ../../fieldkit/lwstreams gitdeps
+rsync -zvua --delete --exclude build ../simple-lora-comms fknatpi: && ssh -tt fknatpi "cd simple-lora-comms && make"

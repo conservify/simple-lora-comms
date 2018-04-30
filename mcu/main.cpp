@@ -5,7 +5,7 @@
 
 #include <lwstreams/streams.h>
 
-#include "lora_radio.h"
+#include "lora_radio_rh.h"
 #include "protocol.h"
 #include "debug.h"
 
@@ -62,7 +62,7 @@ void setup() {
     }
     fklogln("");
 
-    LoraRadio radio{ 5, 2, 0, 3 };
+    LoraRadioRadioHead radio{ 5, 2, 0, 3 };
     if (!radio.setup()) {
         fklogln("lora-test: No radio");
         while (true);

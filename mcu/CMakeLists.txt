@@ -4,10 +4,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/../../ar
 if(EXISTS ${ARDUINO_IDE})
   include(ArduinoMinimal)
 
-  include_directories(../common)
-  include_directories(../protocol/src)
+  include_directories(../src)
 
-  file(GLOB SOURCE_FILES *.cpp ../common/*.cpp ../protocol/src/*.c)
+  file(GLOB SOURCE_FILES *.cpp ../src/*.cpp ../src/*.c)
 
   set(LIBRARIES SPI Wire)
 

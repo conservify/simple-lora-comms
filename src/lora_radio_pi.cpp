@@ -1,8 +1,6 @@
-#include <cstring>
-#include <cstdio>
+#ifndef ARDUINO
 
 #include "lora_radio_pi.h"
-#include "protocol.h"
 
 modem_config_t Bw125Cr45Sf128 = { 0x72, 0x74, 0x00};
 modem_config_t Bw500Cr45Sf128 = { 0x92, 0x74, 0x00};
@@ -296,3 +294,5 @@ void LoraRadioPi::reset() {
     digitalWrite(pinReset, HIGH);
     delay(100);
 }
+
+#endif

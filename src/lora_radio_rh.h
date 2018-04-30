@@ -1,5 +1,8 @@
-#include <cassert>
+#ifndef FK_LORA_RADIO_RH_INCLUDED
+#define FK_LORA_RADIO_RH_INCLUDED
+#ifdef ARDUINO
 
+#include <cassert>
 #include <SPI.h>
 #include <RH_RF95.h>
 
@@ -7,7 +10,7 @@
 
 constexpr size_t FK_QUEUE_ENTRY_SIZE = 242;
 
-class LoraRadio : public PacketRadio {
+class LoraRadioRadioHead : public PacketRadio {
 private:
     RH_RF95 rf95;
     uint8_t pinCs;
@@ -16,7 +19,9 @@ private:
     bool available{ false };
 
 public:
-    LoraRadio(uint8_t pinCs, uint8_t pinG0, uint8_t pinEnable, uint8_t pinReset);
+    LoraRadioRadioHead(uint8_t pinCs, uint8_t pinG0, uint8_t pinEnable, uint8_t pinReset);
+
+public:
     bool setup();
     void tick();
     bool sendPacket(LoraPacket &packet) override;
@@ -115,3 +120,6 @@ public:
     }
 
 };
+
+#endif
+#endif
