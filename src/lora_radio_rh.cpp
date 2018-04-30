@@ -2,8 +2,8 @@
 
 #include "lora_radio_rh.h"
 
-LoraRadioRadioHead::LoraRadioRadioHead(uint8_t pinCs, uint8_t pinG0, uint8_t pinEnable, uint8_t pinReset)
-    : pinCs(pinCs), pinReset(pinReset), rf95(pinCs, pinG0), pinEnable(pinEnable), available(false) {
+LoraRadioRadioHead::LoraRadioRadioHead(uint8_t pinCs, uint8_t pinD0, uint8_t pinEnable, uint8_t pinReset)
+    : pinCs(pinCs), pinReset(pinReset), rf95(pinCs, pinD0), pinEnable(pinEnable), available(false) {
 }
 
 bool LoraRadioRadioHead::setup() {
@@ -47,10 +47,6 @@ bool LoraRadioRadioHead::sendPacket(LoraPacket &packet) {
     rf95.setHeaderId(packet.id);
     rf95.setHeaderFlags(packet.flags);
     return rf95.send(packet.data, packet.size);
-}
-
-void LoraRadioRadioHead::tick() {
-
 }
 
 LoraPacket LoraRadioRadioHead::getLoraPacket() {

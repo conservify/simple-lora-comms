@@ -81,8 +81,11 @@ void setup() {
     protocol.setNodeId(nodeId);
 
     while (true) {
-        radio.tick();
         protocol.tick();
+
+        if (protocol.hasBeenSleepingFor(5000))  {
+            protocol.sendToGateway();
+        }
 
         if (radio.hasPacket()) {
             auto lora = radio.getLoraPacket();

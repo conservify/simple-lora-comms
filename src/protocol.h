@@ -15,7 +15,7 @@
 
 enum class NetworkState {
     Starting,
-    Listening,
+    ListenForSilence,
     Idle,
 
     Sleeping,
@@ -29,12 +29,14 @@ enum class NetworkState {
     ReadData,
     SendData,
     WaitingForSendMore,
+
+    Listening,
 };
 
 inline const char *getStateName(NetworkState state) {
     switch (state) {
     case NetworkState::Starting: return "Starting";
-    case NetworkState::Listening: return "Listening";
+    case NetworkState::ListenForSilence: return "ListenForSilence";
     case NetworkState::Idle: return "Idle";
     case NetworkState::Sleeping: return "Sleeping";
 
@@ -47,6 +49,8 @@ inline const char *getStateName(NetworkState state) {
     case NetworkState::ReadData: return "ReadData";
     case NetworkState::SendData: return "SendData";
     case NetworkState::WaitingForSendMore: return "WaitingForSendMore";
+
+    case NetworkState::Listening: return "Listening";
     default: {
         return "Unknown";
     }
@@ -61,11 +65,9 @@ class NetworkProtocol {
 protected:
     static constexpr uint32_t ReceiveWindowLength = 1000;
     static constexpr uint32_t ReplyDelay = 50;
-    static constexpr uint32_t IdleWindowMin = 5000;
-    static constexpr uint32_t IdleWindowMax = 10000;
-    static constexpr uint32_t SleepingWindowMin = 2000;
-    static constexpr uint32_t SleepingWindowMax = 3000;
-    static constexpr uint32_t ListeningWindowLength = 5000;
+    static constexpr uint32_t IdleWindowMin = 400;
+    static constexpr uint32_t IdleWindowMax = 1600;
+    static constexpr uint32_t ListenForSilenceWindowLength = 5000;
 
     struct RetryCounter {
         uint8_t counter{ 0 };
@@ -116,6 +118,13 @@ public:
     }
 
 public:
+    bool isSleeping() {
+        return state == NetworkState::Sleeping;
+    }
+
+    bool hasBeenSleepingFor(uint32_t ms) {
+        return isSleeping() && inStateFor(ms);
+    }
 
 protected:
     RetryCounter &retries() {
@@ -168,6 +177,7 @@ public:
 public:
     void tick();
     void push(LoraPacket &lora);
+    void sendToGateway();
 
 };
 

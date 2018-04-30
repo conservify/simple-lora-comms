@@ -19,11 +19,10 @@ private:
     bool available{ false };
 
 public:
-    LoraRadioRadioHead(uint8_t pinCs, uint8_t pinG0, uint8_t pinEnable, uint8_t pinReset);
+    LoraRadioRadioHead(uint8_t pinCs, uint8_t pinD0, uint8_t pinEnable, uint8_t pinReset);
 
 public:
     bool setup();
-    void tick();
     bool sendPacket(LoraPacket &packet) override;
 
     void waitPacketSent() {

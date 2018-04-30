@@ -71,6 +71,10 @@ bool NetworkProtocol::inStateFor(uint32_t ms) {
     return millis() - lastTransitionAt > ms;
 }
 
+void NodeNetworkProtocol::sendToGateway() {
+    transition(NetworkState::Idle, random(IdleWindowMin, IdleWindowMax));
+}
+
 void NodeNetworkProtocol::tick() {
     if (getRadio()->isModeTx()) {
         if (!transmitting.isRunning()) {
@@ -83,13 +87,13 @@ void NodeNetworkProtocol::tick() {
     switch (getState()) {
     case NetworkState::Starting: {
         retries().clear();
-        transition(NetworkState::Listening);
+        transition(NetworkState::Sleeping);
         break;
     }
     case NetworkState::Idle: {
         getRadio()->setModeIdle();
         if (isTimerDone()) {
-            transition(NetworkState::Listening);
+            transition(NetworkState::ListenForSilence);
         }
         break;
     }
@@ -100,10 +104,10 @@ void NodeNetworkProtocol::tick() {
         }
         break;
     }
-    case NetworkState::Listening: {
+    case NetworkState::ListenForSilence: {
         retries().clear();
         getRadio()->setModeRx();
-        if (inStateFor(ListeningWindowLength)) {
+        if (inStateFor(ListenForSilenceWindowLength)) {
             transition(NetworkState::PingGateway);
         }
         break;
@@ -116,10 +120,10 @@ void NodeNetworkProtocol::tick() {
     case NetworkState::WaitingForPong: {
         if (!getRadio()->isModeTx()) {
             getRadio()->setModeRx();
-            if (inStateFor(ReceiveWindowLength)) {
-                logger << "Radio: FAIL!\n";
-                transition(NetworkState::Listening);
-            }
+        }
+        if (inStateFor(ReceiveWindowLength)) {
+            logger << "Radio: FAIL!\n";
+            transition(NetworkState::ListenForSilence);
         }
         break;
     }
@@ -138,15 +142,15 @@ void NodeNetworkProtocol::tick() {
     case NetworkState::WaitingForReady: {
         if (!getRadio()->isModeTx()) {
             getRadio()->setModeRx();
-            if (inStateFor(ReceiveWindowLength)) {
-                if (retries().canRetry()) {
-                    logger << "Radio: RETRY!\n";
-                    transition(NetworkState::Prepare);
-                }
-                else {
-                    logger << "Radio: FAIL!\n";
-                    transition(NetworkState::Listening);
-                }
+        }
+        if (inStateFor(ReceiveWindowLength)) {
+            if (retries().canRetry()) {
+                logger << "Radio: RETRY!\n";
+                transition(NetworkState::Prepare);
+            }
+            else {
+                logger << "Radio: FAIL!\n";
+                transition(NetworkState::ListenForSilence);
             }
         }
         break;
@@ -155,7 +159,7 @@ void NodeNetworkProtocol::tick() {
         auto bp = buffer.toBufferPtr();
         auto bytes = reader->read(bp.ptr, bp.size);
         if (bytes < 0) {
-            transition(NetworkState::Idle, random(IdleWindowMin, IdleWindowMax));
+            transition(NetworkState::Sleeping);
             logger << "Done! waitingOnAck: " << waitingOnAck << " transmitting: " << transmitting << "\n";
         }
         else if (bytes > 0) {
@@ -175,15 +179,15 @@ void NodeNetworkProtocol::tick() {
     case NetworkState::WaitingForSendMore: {
         if (!getRadio()->isModeTx()) {
             getRadio()->setModeRx();
-            if (inStateFor(ReceiveWindowLength)) {
-                if (retries().canRetry()) {
-                    logger << "Radio: RETRY!\n";
-                    transition(NetworkState::SendData);
-                }
-                else {
-                    logger << "Radio: FAIL!\n";
-                    transition(NetworkState::Listening);
-                }
+        }
+        if (inStateFor(ReceiveWindowLength)) {
+            if (retries().canRetry()) {
+                logger << "Radio: RETRY!\n";
+                transition(NetworkState::SendData);
+            }
+            else {
+                logger << "Radio: FAIL!\n";
+                transition(NetworkState::ListenForSilence);
             }
         }
         break;
@@ -201,9 +205,9 @@ void NodeNetworkProtocol::push(LoraPacket &lora) {
     logger << "Radio: R " << lora.id << " " << packet.m().kind << " (" << lora.size << " bytes)" << (traffic ? " TRAFFIC" : "") << "\n";
 
     switch (getState()) {
-    case NetworkState::Listening: {
+    case NetworkState::ListenForSilence: {
         if (traffic) {
-            transition(NetworkState::Sleeping, random(SleepingWindowMin, SleepingWindowMax));
+            transition(NetworkState::Sleeping);
             return;
         }
         break;
