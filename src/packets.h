@@ -119,8 +119,8 @@ inline bool pb_decode_data(pb_istream_t *stream, const pb_field_t *field, void *
 class RadioPacket {
 private:
     fk_radio_RadioPacket message = fk_radio_RadioPacket_init_default;
-    DeviceIdBuffer deviceId;
-    pb_data_t deviceIdInfo;
+    NodeLoraId nodeId;
+    pb_data_t nodeIdInfo;
     pb_data_t dataInfo;
 
 public:
@@ -131,7 +131,7 @@ public:
         message.kind = kind;
     }
 
-    RadioPacket(fk_radio_PacketKind kind, DeviceIdBuffer &deviceId) : deviceId(deviceId) {
+    RadioPacket(fk_radio_PacketKind kind, NodeLoraId &nodeId) : nodeId(nodeId) {
         message.kind = kind;
     }
 
@@ -163,27 +163,27 @@ public:
         message = fk_radio_RadioPacket_init_default;
     }
 
-    DeviceIdBuffer &getDeviceId() {
-        return deviceId;
+    NodeLoraId &getNodeId() {
+        return nodeId;
     }
 
     fk_radio_RadioPacket *forDecode() {
-        deviceIdInfo.ptr = deviceId.ptr;
-        deviceIdInfo.size = deviceId.size;
+        nodeIdInfo.ptr = nodeId.ptr;
+        nodeIdInfo.size = nodeId.size;
 
-        message.deviceId.funcs.decode = pb_decode_data;
-        message.deviceId.arg = (void *)&deviceIdInfo;
+        message.nodeId.funcs.decode = pb_decode_data;
+        message.nodeId.arg = (void *)&nodeIdInfo;
         message.data.funcs.decode = pb_decode_data;
         message.data.arg = (void *)&dataInfo;
         return &message;
     }
 
     fk_radio_RadioPacket *forEncode() {
-        deviceIdInfo.ptr = deviceId.ptr;
-        deviceIdInfo.size = deviceId.size;
+        nodeIdInfo.ptr = nodeId.ptr;
+        nodeIdInfo.size = nodeId.size;
 
-        message.deviceId.funcs.encode = pb_encode_data;
-        message.deviceId.arg = (void *)&deviceIdInfo;
+        message.nodeId.funcs.encode = pb_encode_data;
+        message.nodeId.arg = (void *)&nodeIdInfo;
         message.data.funcs.encode = pb_encode_data;
         message.data.arg = (void *)&dataInfo;
         return &message;

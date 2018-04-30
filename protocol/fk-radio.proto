@@ -12,7 +12,7 @@ enum PacketKind {
 
 message RadioPacket {
   PacketKind kind = 1;
-  bytes deviceId = 2;
+  bytes nodeId = 2;
   int32 address = 3;
   int32 size = 4;
   bytes data = 5;

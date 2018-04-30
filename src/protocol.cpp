@@ -38,7 +38,7 @@ bool NetworkProtocol::sendPacket(RadioPacket &&packet) {
     lora.id = sequence;
     memcpy(lora.data, buffer, stream.bytes_written);
     lora.size = stream.bytes_written;
-    logger << "Radio: S " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << " (" << stream.bytes_written << " bytes)\n";
+    logger << "Radio: S " << lora.id << " " << packet.m().kind << " " << packet.getNodeId() << " (" << stream.bytes_written << " bytes)\n";
     return radio->sendPacket(lora);
 }
 
@@ -109,7 +109,7 @@ void NodeNetworkProtocol::tick() {
         break;
     }
     case NetworkState::PingGateway: {
-        sendPacket(RadioPacket{ fk_radio_PacketKind_PING, deviceId });
+        sendPacket(RadioPacket{ fk_radio_PacketKind_PING, nodeId });
         transition(NetworkState::WaitingForPong);
         break;
     }
@@ -128,7 +128,7 @@ void NodeNetworkProtocol::tick() {
             delete reader;
         }
         reader = new lws::CountingReader(4096);
-        auto prepare = RadioPacket{ fk_radio_PacketKind_PREPARE, deviceId };
+        auto prepare = RadioPacket{ fk_radio_PacketKind_PREPARE, nodeId };
         prepare.m().size = 4096;
         sendPacket(std::move(prepare));
         transition(NetworkState::WaitingForReady);
@@ -165,7 +165,7 @@ void NodeNetworkProtocol::tick() {
         break;
     }
     case NetworkState::SendData: {
-        auto packet = RadioPacket{ fk_radio_PacketKind_DATA, deviceId };
+        auto packet = RadioPacket{ fk_radio_PacketKind_DATA, nodeId };
         packet.data(buffer.toBufferPtr().ptr, buffer.position());
         sendPacket(std::move(packet));
         transition(NetworkState::WaitingForSendMore);
@@ -196,7 +196,7 @@ void NodeNetworkProtocol::tick() {
 
 void NodeNetworkProtocol::push(LoraPacket &lora) {
     auto packet = RadioPacket{ lora };
-    auto traffic = packet.m().kind != fk_radio_PacketKind_ACK && packet.getDeviceId() != deviceId;
+    auto traffic = packet.m().kind != fk_radio_PacketKind_ACK && packet.getNodeId() != nodeId;
 
     logger << "Radio: R " << lora.id << " " << packet.m().kind << " (" << lora.size << " bytes)" << (traffic ? " TRAFFIC" : "") << "\n";
 
@@ -271,14 +271,14 @@ void GatewayNetworkProtocol::tick() {
 void GatewayNetworkProtocol::push(LoraPacket &lora) {
     auto packet = RadioPacket{ lora };
 
-    logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << " (" << lora.size << " bytes)\n";
+    logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getNodeId() << " (" << lora.size << " bytes)\n";
 
     switch (getState()) {
     case NetworkState::Listening: {
         switch (packet.m().kind) {
         case fk_radio_PacketKind_PING: {
             delay(ReplyDelay);
-            auto pong = RadioPacket{ fk_radio_PacketKind_PONG, packet.getDeviceId() };
+            auto pong = RadioPacket{ fk_radio_PacketKind_PONG, packet.getNodeId() };
             pong.m().address = nextAddress++;
             sendPacket(std::move(pong));
             break;

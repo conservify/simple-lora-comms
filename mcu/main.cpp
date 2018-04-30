@@ -19,7 +19,7 @@ public:
     }
 
 public:
-    bool read128bMac(DeviceIdBuffer &id) {
+    bool read128bMac(NodeLoraId &id) {
         bus->beginTransmission(address);
         bus->write(0xf8);
         if (bus->endTransmission() != 0) {
@@ -51,14 +51,14 @@ void setup() {
 
     MacAddressEeprom eeprom{ Wire };
 
-    DeviceIdBuffer deviceId;
-    if (!eeprom.read128bMac(deviceId)) {
+    NodeLoraId nodeId;
+    if (!eeprom.read128bMac(nodeId)) {
         logger.print("lora-test: No address\n");
         while (true);
     }
     logger.print("lora-test: Address: ");
     for (auto i = 0; i < 8; ++i) {
-        logger.printf("%02x", deviceId[i]);
+        logger.printf("%02x", nodeId[i]);
     }
     logger.print("\n");
 
@@ -78,7 +78,7 @@ void setup() {
 
     auto protocol = NodeNetworkProtocol{ radio };
 
-    protocol.setDeviceId(deviceId);
+    protocol.setNodeId(nodeId);
 
     while (true) {
         radio.tick();

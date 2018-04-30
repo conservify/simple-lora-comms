@@ -1,14 +1,14 @@
 #ifndef SLC_DEVICE_ID_H_INCLUDED
 #define SLC_DEVICE_ID_H_INCLUDED
 
-struct DeviceIdBuffer {
+struct NodeLoraId {
     uint8_t ptr[8] = { 0 };
     size_t size{ 8 };
 
-    DeviceIdBuffer() {
+    NodeLoraId() {
     }
 
-    DeviceIdBuffer(lws::BufferPtr bp) {
+    NodeLoraId(lws::BufferPtr bp) {
         auto copying = bp.size >= size ? size : bp.size;
         memcpy(ptr, bp.ptr, copying);
         size = copying;
@@ -25,7 +25,7 @@ struct DeviceIdBuffer {
     }
 };
 
-inline Logger& operator<<(Logger &log, const DeviceIdBuffer &deviceId) {
+inline Logger& operator<<(Logger &log, const NodeLoraId &deviceId) {
     if (deviceId.size == 8) {
         log.printf("%02x%02x%02x%02x%02x%02x%02x%02x",
                    deviceId[0], deviceId[1], deviceId[2], deviceId[3],
@@ -37,7 +37,7 @@ inline Logger& operator<<(Logger &log, const DeviceIdBuffer &deviceId) {
     return log;
 }
 
-inline bool operator==(const DeviceIdBuffer& lhs, const DeviceIdBuffer& rhs) {
+inline bool operator==(const NodeLoraId& lhs, const NodeLoraId& rhs) {
     if (lhs.size != rhs.size) {
         return false;
     }
@@ -52,7 +52,7 @@ inline bool operator==(const DeviceIdBuffer& lhs, const DeviceIdBuffer& rhs) {
     return true;
 }
 
-inline bool operator!=(const DeviceIdBuffer& lhs, const DeviceIdBuffer& rhs) {
+inline bool operator!=(const NodeLoraId& lhs, const NodeLoraId& rhs) {
     return !(lhs == rhs);
 }
 
