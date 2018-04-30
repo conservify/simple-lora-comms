@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FK_PROTOCOL_H_INCLUDED
+#define FK_PROTOCOL_H_INCLUDED
 
 #include <cstdlib>
 #include <cstdint>
@@ -9,25 +10,14 @@
 
 #include "debug.h"
 
-#ifdef ARDUINO
-#include <Arduino.h>
-#else
-#include <wiringPi.h>
-#endif
-
-#ifndef ARDUINO
-inline int32_t random(int32_t min, int32_t max) {
-    return (rand() % (max - min)) + min;
-}
-#endif
-
 #include "device_id.h"
-#include "packets.h"
+#include "packet_radio.h"
 
 enum class NetworkState {
     Starting,
     Listening,
     Idle,
+
     Sleeping,
 
     PingGateway,
@@ -66,17 +56,6 @@ inline const char *getStateName(NetworkState state) {
 inline Logger& operator<<(Logger &log, const NetworkState &state) {
     return log.print(getStateName(state));
 }
-
-class PacketRadio {
-public:
-    virtual bool isModeRx() = 0;
-    virtual bool isModeTx() = 0;
-    virtual bool isIdle() = 0;
-    virtual void setModeRx() = 0;
-    virtual void setModeIdle() = 0;
-    virtual bool sendPacket(LoraPacket &packet) = 0 ;
-
-};
 
 class NetworkProtocol {
 protected:
@@ -121,25 +100,13 @@ public:
 public:
     bool sendPacket(RadioPacket &&packet);
 
-    void transition(NetworkState newState, uint32_t timer = 0) {
-        lastTransitionAt = millis();
-        fklogln("Radio: %s -> %s", getStateName(state), getStateName(newState));
-        state = newState;
-        if (timer > 0) {
-            timerDoneAt = millis() + timer;
-        }
-        else {
-            timerDoneAt = 0;
-        }
-    }
+    bool sendAck(uint8_t toAddress);
 
-    bool isTimerDone() {
-        return timerDoneAt > 0 && millis() > timerDoneAt;
-    }
+    void transition(NetworkState newState, uint32_t timer = 0);
 
-    bool inStateFor(uint32_t ms) {
-        return millis() - lastTransitionAt > ms;
-    }
+    bool isTimerDone();
+
+    bool inStateFor(uint32_t ms);
 
     void zeroSequence() {
         sequence = 0;
@@ -215,3 +182,5 @@ public:
     void push(LoraPacket &lora, RadioPacket &packet);
 
 };
+
+#endif

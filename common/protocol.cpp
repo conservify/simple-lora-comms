@@ -7,6 +7,18 @@
 #include "file_writer.h"
 #include "timer.h"
 
+#ifdef ARDUINO
+#include <Arduino.h>
+#else
+#include <wiringPi.h>
+#endif
+
+#ifndef ARDUINO
+inline int32_t random(int32_t min, int32_t max) {
+    return (rand() % (max - min)) + min;
+}
+#endif
+
 static Timer transmitting;
 static Timer waitingOnAck;
 
@@ -30,6 +42,35 @@ bool NetworkProtocol::sendPacket(RadioPacket &&packet) {
     return radio->sendPacket(lora);
 }
 
+bool NetworkProtocol::sendAck(uint8_t toAddress) {
+    LoraPacket ack;
+    ack.id = sequence;
+    ack.to = toAddress;
+    ack.flags = 1;
+    ack.size = 0;
+    return radio->sendPacket(ack);
+}
+
+void NetworkProtocol::transition(NetworkState newState, uint32_t timer) {
+    lastTransitionAt = millis();
+    fklogln("Radio: %s -> %s", getStateName(state), getStateName(newState));
+    state = newState;
+    if (timer > 0) {
+        timerDoneAt = millis() + timer;
+    }
+    else {
+        timerDoneAt = 0;
+    }
+}
+
+bool NetworkProtocol::isTimerDone() {
+    return timerDoneAt > 0 && millis() > timerDoneAt;
+}
+
+bool NetworkProtocol::inStateFor(uint32_t ms) {
+    return millis() - lastTransitionAt > ms;
+}
+
 void NodeNetworkProtocol::tick() {
     if (getRadio()->isModeTx()) {
         if (!transmitting.isRunning()) {
@@ -46,7 +87,14 @@ void NodeNetworkProtocol::tick() {
         break;
     }
     case NetworkState::Idle: {
-        getRadio()->setModeRx();
+        getRadio()->setModeIdle();
+        if (isTimerDone()) {
+            transition(NetworkState::Listening);
+        }
+        break;
+    }
+    case NetworkState::Sleeping: {
+        getRadio()->setModeIdle();
         if (isTimerDone()) {
             transition(NetworkState::Listening);
         }
@@ -57,13 +105,6 @@ void NodeNetworkProtocol::tick() {
         getRadio()->setModeRx();
         if (inStateFor(ListeningWindowLength)) {
             transition(NetworkState::PingGateway);
-        }
-        break;
-    }
-    case NetworkState::Sleeping: {
-        getRadio()->setModeIdle();
-        if (isTimerDone()) {
-            transition(NetworkState::Listening);
         }
         break;
     }
@@ -201,6 +242,9 @@ void NodeNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
         }
         break;
     }
+    default: {
+        break;
+    }
     }
 
     #ifdef ARDUINO
@@ -223,6 +267,9 @@ void GatewayNetworkProtocol::tick() {
         break;
     }
     case NetworkState::SendPong: {
+        break;
+    }
+    default: {
         break;
     }
     }

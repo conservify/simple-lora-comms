@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FK_PACKETS_H_INCLUDED
+#define FK_PACKETS_H_INCLUDED
 
 #include <pb_encode.h>
 #include <pb_decode.h>
@@ -189,3 +190,5 @@ public:
     }
 
 };
+
+#endif

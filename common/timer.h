@@ -1,6 +1,12 @@
 #ifndef FK_TIMER_H_INCLUDED
 #define FK_TIMER_H_INCLUDED
 
+#ifdef ARDUINO
+#include <Arduino.h>
+#else
+#include <wiringPi.h>
+#endif
+
 class Timer {
 private:
     uint32_t started{ 0 };
