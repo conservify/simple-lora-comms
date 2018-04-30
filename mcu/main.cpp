@@ -84,8 +84,7 @@ void setup() {
 
         if (radio.hasPacket()) {
             auto lora = radio.getLoraPacket();
-            auto received = RadioPacket{ lora };
-            protocol.push(lora, received);
+            protocol.push(lora);
         }
 
         delay(10);

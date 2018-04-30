@@ -163,7 +163,7 @@ public:
 
 public:
     void tick();
-    void push(LoraPacket &lora, RadioPacket &packet);
+    void push(LoraPacket &lora);
 
 };
 
@@ -179,7 +179,7 @@ public:
 
 public:
     void tick();
-    void push(LoraPacket &lora, RadioPacket &packet);
+    void push(LoraPacket &lora);
 
 };
 

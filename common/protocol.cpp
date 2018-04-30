@@ -194,10 +194,11 @@ void NodeNetworkProtocol::tick() {
     }
 }
 
-void NodeNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
-    auto traffic = packet.getDeviceId() != deviceId;
+void NodeNetworkProtocol::push(LoraPacket &lora) {
+    auto packet = RadioPacket{ lora };
+    auto traffic = packet.m().kind != fk_radio_PacketKind_ACK && packet.getDeviceId() != deviceId;
 
-    logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << " " << lora.size << (traffic ? " TRAFFIC" : "") << "\n";
+    logger << "Radio: R " << lora.id << " " << packet.m().kind << " (" << lora.size << " bytes)" << (traffic ? " TRAFFIC" : "") << "\n";
 
     switch (getState()) {
     case NetworkState::Listening: {
@@ -275,8 +276,10 @@ void GatewayNetworkProtocol::tick() {
     }
 }
 
-void GatewayNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
-    logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << " " << lora.size << "\n";
+void GatewayNetworkProtocol::push(LoraPacket &lora) {
+    auto packet = RadioPacket{ lora };
+
+    logger << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getDeviceId() << " (" << lora.size << " bytes)\n";
 
     switch (getState()) {
     case NetworkState::Listening: {
@@ -300,7 +303,7 @@ void GatewayNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
             totalReceived = 0;
             receiveSequence = 0;
             delay(ReplyDelay);
-            sendPacket(RadioPacket{ fk_radio_PacketKind_ACK, packet.getDeviceId() });
+            sendAck(lora.from);
             break;
         }
         case fk_radio_PacketKind_DATA: {
@@ -316,7 +319,10 @@ void GatewayNetworkProtocol::push(LoraPacket &lora, RadioPacket &packet) {
             }
             logger << "Radio: R " << totalReceived << " " << lora.id << " " << receiveSequence << " " << (dupe ? "DUPE" : "") << "\n";
             delay(ReplyDelay);
-            sendPacket(RadioPacket{ fk_radio_PacketKind_ACK, packet.getDeviceId() });
+            sendAck(lora.from);
+            break;
+        }
+        default: {
             break;
         }
         }

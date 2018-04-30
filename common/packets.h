@@ -134,9 +134,16 @@ public:
     }
 
     RadioPacket(LoraPacket &lora) {
-        auto stream = pb_istream_from_buffer(lora.data, lora.size);
-        if (!pb_decode(&stream, fk_radio_RadioPacket_fields, forDecode())) {
-            fklogln("Unable to decode packet! %d", lora.size);
+        if (lora.size > 0) {
+            auto stream = pb_istream_from_buffer(lora.data, lora.size);
+            if (!pb_decode(&stream, fk_radio_RadioPacket_fields, forDecode())) {
+                fklogln("Unable to decode packet! %d", lora.size);
+            }
+        }
+        else {
+            if (lora.flags == 1) {
+                message.kind = fk_radio_PacketKind_ACK;
+            }
         }
     }
 

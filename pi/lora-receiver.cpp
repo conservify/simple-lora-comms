@@ -54,9 +54,7 @@ int32_t main(int32_t argc, const char **argv) {
         if (incoming.size() > 0) {
             auto lora = incoming.front();
             incoming.pop();
-
-            auto received = RadioPacket{ lora };
-            protocol.push(lora, received);
+            protocol.push(lora);
         }
 
         delay(10);
