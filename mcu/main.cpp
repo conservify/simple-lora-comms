@@ -83,7 +83,7 @@ void setup() {
     while (true) {
         protocol.tick();
 
-        if (protocol.hasBeenSleepingFor(5000))  {
+        if (protocol.hasBeenSleepingFor(20000))  {
             protocol.sendToGateway();
         }
 
