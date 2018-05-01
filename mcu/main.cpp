@@ -4,6 +4,7 @@
 #include <Wire.h>
 
 #include <lwstreams/streams.h>
+#include <alogging/alogging.h>
 
 #include "lora_radio_rh.h"
 #include "protocol.h"
@@ -53,22 +54,17 @@ void setup() {
 
     NodeLoraId nodeId;
     if (!eeprom.read128bMac(nodeId)) {
-        logger.print("lora-test: No address\n");
+        logger() << "lora-test: No address";
         while (true);
     }
-    logger.print("lora-test: Address: ");
-    for (auto i = 0; i < 8; ++i) {
-        logger.printf("%02x", nodeId[i]);
-    }
-    logger.print("\n");
 
     LoraRadioRadioHead radio{ 5, 2, 0, 3 };
     if (!radio.setup()) {
-        logger.print("lora-test: No radio\n");
+        logger() << "lora-test: No radio";
         while (true);
     }
 
-    logger.print("lora-test: Ready\n");
+    logger() << "lora-test: Ready";
 
     pinMode(13, OUTPUT);
 

@@ -2,5 +2,6 @@
 
 set -xe
 
+rsync -zvua --progress ../../conservify/arduino-logging gitdeps
 rsync -zvua --progress ../../fieldkit/lwstreams gitdeps
 rsync -zvua --delete --exclude build ../simple-lora-comms fknatpi: && ssh -tt fknatpi "cd simple-lora-comms && make && build/pi/lora-pi-test"

@@ -60,7 +60,7 @@ public:
 
 };
 
-inline Logger& operator<<(Logger &log, const fk_radio_PacketKind &kind) {
+inline LogStream& operator<<(LogStream &log, const fk_radio_PacketKind &kind) {
     switch (kind) {
     case fk_radio_PacketKind_ACK: return log.print("Ack");
     case fk_radio_PacketKind_NACK: return log.print("NAck");
@@ -139,7 +139,7 @@ public:
         if (lora.size > 0) {
             auto stream = pb_istream_from_buffer(lora.data, lora.size);
             if (!pb_decode(&stream, fk_radio_RadioPacket_fields, forDecode())) {
-                logger << "Unable to decode packet! (" << lora.size << "\n";
+                logger() << "Unable to decode packet! (" << lora.size << "\n";
             }
         }
         else {

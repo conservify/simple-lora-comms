@@ -25,7 +25,7 @@ struct NodeLoraId {
     }
 };
 
-inline Logger& operator<<(Logger &log, const NodeLoraId &deviceId) {
+inline LogStream& operator<<(LogStream &log, const NodeLoraId &deviceId) {
     if (deviceId.size == 8) {
         log.printf("%02x%02x%02x%02x%02x%02x%02x%02x",
                    deviceId[0], deviceId[1], deviceId[2], deviceId[3],

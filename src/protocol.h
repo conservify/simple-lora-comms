@@ -57,7 +57,7 @@ inline const char *getStateName(NetworkState state) {
     }
 }
 
-inline Logger& operator<<(Logger &log, const NetworkState &state) {
+inline LogStream& operator<<(LogStream &log, const NetworkState &state) {
     return log.print(getStateName(state));
 }
 

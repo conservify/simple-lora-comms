@@ -37,7 +37,7 @@ public:
     }
 
 public:
-    friend Logger& operator<<(Logger &log, const Timer &timer) {
+    friend LogStream& operator<<(LogStream &log, const Timer &timer) {
         auto average = timer.samples > 0 ? ((float)timer.total / (float)timer.samples) : 0.0f;
         log.printf("Timer<%d samples, %.2f average>", timer.samples, average);
         return log;

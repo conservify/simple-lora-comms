@@ -8,10 +8,11 @@ if(EXISTS ${WIRINGPI_LIBRARIES})
   include_directories(.)
   include_directories(../src)
   include_directories(../gitdeps/lwstreams/src)
+  include_directories(../gitdeps/arduino-logging/src)
   include_directories(../gitdeps/nanopb)
   include_directories(${WIRINGPI_INCLUDE_DIRS})
 
-  file(GLOB SOURCE_FILES *.cpp ../src/*.cpp ../src/*.c ../gitdeps/nanopb/*.c ../gitdeps/lwstreams/src/lwstreams/*.cpp)
+  file(GLOB SOURCE_FILES *.cpp ../src/*.cpp ../src/*.c ../gitdeps/nanopb/*.c ../gitdeps/lwstreams/src/lwstreams/*.cpp ../gitdeps/arduino-logging/src/*.cpp)
 
   add_executable(lora-pi-test ${SOURCE_FILES})
   set_target_properties(lora-pi-test PROPERTIES COMPILE_FLAGS "-Wall -ggdb")
