@@ -7,7 +7,7 @@
 #include <alogging/alogging.h>
 
 #include "lora_radio_rh.h"
-#include "protocol.h"
+#include "node_protocol.h"
 
 class MacAddressEeprom {
 private:

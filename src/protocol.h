@@ -1,15 +1,16 @@
 #ifndef SLC_PROTOCOL_H_INCLUDED
 #define SLC_PROTOCOL_H_INCLUDED
 
+#include <lwstreams/lwstreams.h>
+
 #include <cstdlib>
 #include <cstdint>
 #include <cstring>
 #include <cassert>
 
-#include <lwstreams/lwstreams.h>
-
 #include "device_id.h"
 #include "packet_radio.h"
+#include "timer.h"
 
 enum class NetworkState {
     Starting,
@@ -139,61 +140,7 @@ protected:
 
 };
 
-template<size_t Size>
-struct HoldingBuffer {
-    lws::AlignedStorageBuffer<Size> buffer;
-    size_t pos{ 0 };
-
-    lws::BufferPtr toBufferPtr() {
-        return buffer.toBufferPtr();
-    }
-
-    size_t position() {
-        return pos;
-    }
-
-    void position(size_t newPos) {
-        pos = newPos;
-    }
-};
-
-class NodeNetworkProtocol : public NetworkProtocol {
-private:
-    NodeLoraId nodeId;
-    HoldingBuffer<242 - 24> buffer;
-    lws::Reader *reader{ nullptr };
-
-public:
-    NodeNetworkProtocol(PacketRadio &radio) : NetworkProtocol(radio) {
-    }
-
-public:
-    void setNodeId(NodeLoraId id) {
-        nodeId = id;
-    }
-
-public:
-    void tick();
-    void push(LoraPacket &lora);
-    void sendToGateway();
-
-};
-
-class GatewayNetworkProtocol : public NetworkProtocol {
-private:
-    uint8_t nextAddress{ 1 };
-    size_t totalReceived{ 0 };
-    uint8_t receiveSequence{ 0 };
-    lws::Writer *writer{ nullptr };
-
-public:
-    GatewayNetworkProtocol(PacketRadio &radio) : NetworkProtocol(radio) {
-    }
-
-public:
-    void tick();
-    void push(LoraPacket &lora);
-
-};
+extern Timer transmitting;
+extern Timer waitingOnAck;
 
 #endif

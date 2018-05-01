@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 #include "lora_radio_pi.h"
-#include "protocol.h"
+#include "gateway_protocol.h"
 
 constexpr uint8_t PIN_SELECT = 6;
 constexpr uint8_t PIN_DIO_0 = 7;
@@ -37,9 +37,6 @@ int32_t main(int32_t argc, const char **argv) {
     // This is purely to ensure the mutex inside is ready. This can be forgiving
     // until you start using the heap, etc...
     radio.setup();
-
-    // radio.setHeaderTo(0x00);
-    // radio.setHeaderFrom(0xff);
 
     auto protocol = GatewayNetworkProtocol{ radio };
 
