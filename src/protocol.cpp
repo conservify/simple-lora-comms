@@ -3,7 +3,6 @@
 #include <cstdio>
 
 #include "protocol.h"
-#include "debug.h"
 #include "file_writer.h"
 #include "timer.h"
 
@@ -38,7 +37,7 @@ bool NetworkProtocol::sendPacket(RadioPacket &&packet) {
     lora.id = sequence;
     memcpy(lora.data, buffer, stream.bytes_written);
     lora.size = stream.bytes_written;
-    logger() << "Radio: S " << lora.id << " " << packet.m().kind << " " << packet.getNodeId() << " (" << stream.bytes_written << " bytes)";
+    slc::log() << "S " << lora.id << " " << packet.m().kind << " " << packet.getNodeId() << " (" << stream.bytes_written << " bytes)";
     return radio->sendPacket(lora);
 }
 
@@ -53,7 +52,7 @@ bool NetworkProtocol::sendAck(uint8_t toAddress) {
 
 void NetworkProtocol::transition(NetworkState newState, uint32_t timer) {
     lastTransitionAt = millis();
-    logger() << "Radio: " << getStateName(state) << " -> " << getStateName(newState);
+    slc::log() << getStateName(state) << " -> " << getStateName(newState);
     state = newState;
     if (timer > 0) {
         timerDoneAt = millis() + timer;
@@ -119,7 +118,7 @@ void NodeNetworkProtocol::tick() {
             getRadio()->setModeRx();
         }
         if (inStateFor(ReceiveWindowLength)) {
-            logger() << "Radio: FAIL!\n";
+            slc::log() << "FAIL!\n";
             transition(NetworkState::ListenForSilence);
         }
         break;
@@ -142,11 +141,11 @@ void NodeNetworkProtocol::tick() {
         }
         if (inStateFor(ReceiveWindowLength)) {
             if (retries().canRetry()) {
-                logger() << "Radio: RETRY!";
+                slc::log() << "RETRY!";
                 transition(NetworkState::Prepare);
             }
             else {
-                logger() << "Radio: FAIL!";
+                slc::log() << "FAIL!";
                 transition(NetworkState::ListenForSilence);
             }
         }
@@ -157,7 +156,7 @@ void NodeNetworkProtocol::tick() {
         auto bytes = reader->read(bp.ptr, bp.size);
         if (bytes < 0) {
             transition(NetworkState::Sleeping);
-            logger() << "Done! waitingOnAck: " << waitingOnAck << " transmitting: " << transmitting;
+            slc::log() << "Done! waitingOnAck: " << waitingOnAck << " transmitting: " << transmitting;
         }
         else if (bytes > 0) {
             buffer.position(bytes);
@@ -179,11 +178,11 @@ void NodeNetworkProtocol::tick() {
         }
         if (inStateFor(ReceiveWindowLength)) {
             if (retries().canRetry()) {
-                logger() << "Radio: RETRY!";
+                slc::log() << "RETRY!";
                 transition(NetworkState::SendData);
             }
             else {
-                logger() << "Radio: FAIL!";
+                slc::log() << "FAIL!";
                 transition(NetworkState::ListenForSilence);
             }
         }
@@ -196,10 +195,14 @@ void NodeNetworkProtocol::tick() {
 }
 
 void NodeNetworkProtocol::push(LoraPacket &lora) {
-    auto packet = RadioPacket{ lora };
+    auto packet = RadioPacket{ };
+    if (!packet.decode(lora)) {
+        slc::log() << "Unable to decode packet!";
+        return;
+    }
     auto traffic = packet.m().kind != fk_radio_PacketKind_ACK && packet.getNodeId() != nodeId;
 
-    logger() << "Radio: R " << lora.id << " " << packet.m().kind << " (" << lora.size << " bytes)" << (traffic ? " TRAFFIC" : "");
+    slc::log() << "R " << lora.id << " " << packet.m().kind << " (" << lora.size << " bytes)" << (traffic ? " TRAFFIC" : "");
 
     switch (getState()) {
     case NetworkState::ListenForSilence: {
@@ -212,7 +215,7 @@ void NodeNetworkProtocol::push(LoraPacket &lora) {
     case NetworkState::WaitingForPong: {
         if (packet.m().kind == fk_radio_PacketKind_PONG) {
             retries().clear();
-            logger() << "Radio: Pong: My address: " << packet.m().address;
+            slc::log() << "Pong: My address: " << packet.m().address;
             transition(NetworkState::Prepare);
         }
         break;
@@ -270,9 +273,13 @@ void GatewayNetworkProtocol::tick() {
 }
 
 void GatewayNetworkProtocol::push(LoraPacket &lora) {
-    auto packet = RadioPacket{ lora };
+    auto packet = RadioPacket{ };
+    if (!packet.decode(lora)) {
+        slc::log() << "Unable to decode packet!";
+        return;
+    }
 
-    logger() << "Radio: R " << lora.id << " " << packet.m().kind << " " << packet.getNodeId() << " (" << lora.size << " bytes)";
+    slc::log() << "R " << lora.id << " " << packet.m().kind << " " << packet.getNodeId() << " (" << lora.size << " bytes)";
 
     switch (getState()) {
     case NetworkState::Listening: {
@@ -312,7 +319,7 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
                 totalReceived += data.size;
                 receiveSequence = lora.id;
             }
-            logger() << "Radio: R " << totalReceived << " " << lora.id << " " << receiveSequence << " " << (dupe ? "DUPE" : "");
+            slc::log() << "R " << totalReceived << " " << lora.id << " " << receiveSequence << " " << (dupe ? "DUPE" : "");
             delay(ReplyDelay);
             sendAck(lora.from);
             break;

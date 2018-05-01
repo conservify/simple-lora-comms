@@ -8,7 +8,6 @@
 
 #include "lora_radio_rh.h"
 #include "protocol.h"
-#include "debug.h"
 
 class MacAddressEeprom {
 private:
@@ -54,17 +53,17 @@ void setup() {
 
     NodeLoraId nodeId;
     if (!eeprom.read128bMac(nodeId)) {
-        logger() << "lora-test: No address";
+        slc::log() << "lora-test: No address";
         while (true);
     }
 
     LoraRadioRadioHead radio{ 5, 2, 0, 3 };
     if (!radio.setup()) {
-        logger() << "lora-test: No radio";
+        slc::log() << "lora-test: No radio";
         while (true);
     }
 
-    logger() << "lora-test: Ready";
+    slc::log() << "lora-test: Ready";
 
     pinMode(13, OUTPUT);
 

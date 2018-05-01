@@ -1,6 +1,9 @@
 #ifndef SLC_DEVICE_ID_H_INCLUDED
 #define SLC_DEVICE_ID_H_INCLUDED
 
+#include <lwstreams/lwstreams.h>
+#include <alogging/alogging.h>
+
 struct NodeLoraId {
     uint8_t ptr[8] = { 0 };
     size_t size{ 8 };

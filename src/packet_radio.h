@@ -19,4 +19,10 @@ public:
 
 };
 
+namespace slc {
+
+extern Logger log;
+
+}
+
 #endif

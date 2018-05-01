@@ -135,11 +135,12 @@ public:
         message.kind = kind;
     }
 
-    RadioPacket(LoraPacket &lora) {
+public:
+    bool decode(LoraPacket &lora) {
         if (lora.size > 0) {
             auto stream = pb_istream_from_buffer(lora.data, lora.size);
             if (!pb_decode(&stream, fk_radio_RadioPacket_fields, forDecode())) {
-                logger() << "Unable to decode packet! (" << lora.size << "\n";
+                return false;
             }
         }
         else {
@@ -147,9 +148,9 @@ public:
                 message.kind = fk_radio_PacketKind_ACK;
             }
         }
+        return true;
     }
 
-public:
     void data(uint8_t *ptr, size_t size) {
         dataInfo.ptr = ptr;
         dataInfo.size = size;

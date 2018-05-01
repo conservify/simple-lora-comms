@@ -6,7 +6,6 @@
 #include <unistd.h>
 
 #include "lora_radio_pi.h"
-#include "debug.h"
 #include "protocol.h"
 
 constexpr uint8_t PIN_SELECT = 6;

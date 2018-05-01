@@ -8,8 +8,6 @@
 
 #include <lwstreams/lwstreams.h>
 
-#include "debug.h"
-
 #include "device_id.h"
 #include "packet_radio.h"
 
