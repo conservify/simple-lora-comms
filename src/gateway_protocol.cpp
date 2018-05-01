@@ -60,8 +60,13 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
             auto dupe = lora.id <= receiveSequence;
             if (!dupe) {
                 if (writer != nullptr) {
-                    auto written = writer->write(data.ptr, data.size);
-                    assert(written == (int32_t)data.size);
+                    if (data.size == 0) {
+                        slc::log() << "R Closed!";
+                    }
+                    else {
+                        auto written = writer->write(data.ptr, data.size);
+                        assert(written == (int32_t)data.size);
+                    }
                 }
                 totalReceived += data.size;
                 receiveSequence = lora.id;

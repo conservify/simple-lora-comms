@@ -81,7 +81,7 @@ void NodeNetworkProtocol::tick() {
             }
             else {
                 slc::log() << "FAIL!";
-                transition(NetworkState::ListenForSilence);
+                transition(NetworkState::SendFailure);
             }
         }
         break;
@@ -90,7 +90,7 @@ void NodeNetworkProtocol::tick() {
         auto bp = buffer.toBufferPtr();
         auto bytes = reader->read(bp.ptr, bp.size);
         if (bytes < 0) {
-            transition(NetworkState::Sleeping);
+            transition(NetworkState::SendClose);
             slc::log() << "Done! waitingOnAck: " << waitingOnAck << " transmitting: " << transmitting;
         }
         else if (bytes > 0) {
@@ -118,7 +118,30 @@ void NodeNetworkProtocol::tick() {
             }
             else {
                 slc::log() << "FAIL!";
-                transition(NetworkState::ListenForSilence);
+                transition(NetworkState::SendFailure);
+            }
+        }
+        break;
+    }
+    case NetworkState::SendClose: {
+        auto packet = RadioPacket{ fk_radio_PacketKind_DATA, nodeId };
+        sendPacket(std::move(packet));
+        transition(NetworkState::WaitingForClosed);
+        waitingOnAck.begin();
+        break;
+    }
+    case NetworkState::WaitingForClosed: {
+        if (!getRadio()->isModeTx()) {
+            getRadio()->setModeRx();
+        }
+        if (inStateFor(ReceiveWindowLength)) {
+            if (retries().canRetry()) {
+                slc::log() << "RETRY!";
+                transition(NetworkState::SendClose);
+            }
+            else {
+                slc::log() << "FAIL!";
+                transition(NetworkState::SendFailure);
             }
         }
         break;
@@ -171,6 +194,15 @@ void NodeNetworkProtocol::push(LoraPacket &lora) {
             bumpSequence();
             retries().clear();
             transition(NetworkState::ReadData);
+        }
+        break;
+    }
+    case NetworkState::WaitingForClosed: {
+        if (packet.m().kind == fk_radio_PacketKind_ACK) {
+            waitingOnAck.end();
+            bumpSequence();
+            retries().clear();
+            transition(NetworkState::Sleeping);
         }
         break;
     }

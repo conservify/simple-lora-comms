@@ -28,8 +28,11 @@ enum class NetworkState {
     ReadData,
     SendData,
     WaitingForSendMore,
+    SendClose,
+    WaitingForClosed,
 
     Listening,
+    SendFailure,
 };
 
 inline const char *getStateName(NetworkState state) {
@@ -48,8 +51,11 @@ inline const char *getStateName(NetworkState state) {
     case NetworkState::ReadData: return "ReadData";
     case NetworkState::SendData: return "SendData";
     case NetworkState::WaitingForSendMore: return "WaitingForSendMore";
+    case NetworkState::SendClose: return "SendClose";
+    case NetworkState::WaitingForClosed: return "WaitingForClosed";
 
     case NetworkState::Listening: return "Listening";
+    case NetworkState::SendFailure: return "SendFailure";
     default: {
         return "Unknown";
     }
@@ -67,6 +73,7 @@ protected:
     static constexpr uint32_t IdleWindowMin = 400;
     static constexpr uint32_t IdleWindowMax = 1600;
     static constexpr uint32_t ListenForSilenceWindowLength = 5000;
+    static constexpr uint32_t MaximumRetries = 5;
 
     struct RetryCounter {
         uint8_t counter{ 0 };
@@ -77,7 +84,7 @@ protected:
 
         bool canRetry() {
             counter++;
-            if (counter == 3) {
+            if (counter == MaximumRetries) {
                 counter = 0;
                 return false;
             }
@@ -119,6 +126,10 @@ public:
 public:
     bool isSleeping() {
         return state == NetworkState::Sleeping;
+    }
+
+    bool hasErrorOccured() {
+        return state == NetworkState::SendFailure;
     }
 
     bool hasBeenSleepingFor(uint32_t ms) {
