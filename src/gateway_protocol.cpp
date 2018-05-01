@@ -46,14 +46,9 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
         case fk_radio_PacketKind_PREPARE: {
             if (writer != nullptr) {
                 writer->close();
-                delete writer;
+                callbacks->closeWriter(writer);
             }
-            auto fileWriter = new FileWriter("DATA");
-            if (!fileWriter->open()) {
-                delete fileWriter;
-                fileWriter = nullptr;
-            }
-            writer = fileWriter;
+            writer = callbacks->openWriter(packet);
             totalReceived = 0;
             receiveSequence = 0;
             delay(ReplyDelay);

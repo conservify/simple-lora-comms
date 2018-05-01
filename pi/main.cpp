@@ -7,6 +7,7 @@
 
 #include "lora_radio_pi.h"
 #include "gateway_protocol.h"
+#include "file_writer.h"
 
 constexpr uint8_t PIN_SELECT = 6;
 constexpr uint8_t PIN_DIO_0 = 7;
@@ -17,6 +18,22 @@ void write_pid() {
     fprintf(fp, "%d", getpid());
     fclose(fp);
 }
+
+class DumbGatewayCallbacks : public GatewayNetworkCallbacks {
+public:
+    lws::Writer *openWriter(RadioPacket &packet) override {
+        auto writer = new FileWriter("DATA");
+        if (!writer->open()) {
+            delete writer;
+            writer = nullptr;
+        }
+        return writer;
+    }
+
+    void closeWriter(lws::Writer *writer) override {
+    }
+
+};
 
 int32_t main(int32_t argc, const char **argv) {
     if (argc > 1) {
@@ -38,7 +55,8 @@ int32_t main(int32_t argc, const char **argv) {
     // until you start using the heap, etc...
     radio.setup();
 
-    auto protocol = GatewayNetworkProtocol{ radio };
+    auto callbacks = DumbGatewayCallbacks{ };
+    auto protocol = GatewayNetworkProtocol{ radio, callbacks };
 
     while (true) {
         radio.tick();

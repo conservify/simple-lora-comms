@@ -21,14 +21,22 @@ struct HoldingBuffer {
     }
 };
 
+class NodeNetworkCallbacks {
+public:
+    virtual lws::Reader *openReader() = 0;
+    virtual void closeReader(lws::Reader *reader) = 0;
+
+};
+
 class NodeNetworkProtocol : public NetworkProtocol {
 private:
+    NodeNetworkCallbacks *callbacks{ nullptr };
     NodeLoraId nodeId;
     HoldingBuffer<242 - 24> buffer;
     lws::Reader *reader{ nullptr };
 
 public:
-    NodeNetworkProtocol(PacketRadio &radio) : NetworkProtocol(radio) {
+    NodeNetworkProtocol(PacketRadio &radio, NodeNetworkCallbacks &callbacks) : NetworkProtocol(radio), callbacks(&callbacks) {
     }
 
 public:

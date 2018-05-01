@@ -54,18 +54,17 @@ void NodeNetworkProtocol::tick() {
             getRadio()->setModeRx();
         }
         if (inStateFor(ReceiveWindowLength)) {
-            slc::log() << "FAIL!\n";
+            slc::log() << "FAIL!";
             transition(NetworkState::ListenForSilence);
         }
         break;
     }
     case NetworkState::Prepare: {
         if (reader != nullptr) {
-            delete reader;
+            callbacks->closeReader(reader);
         }
-        reader = new lws::CountingReader(4096);
+        reader = callbacks->openReader();
         auto prepare = RadioPacket{ fk_radio_PacketKind_PREPARE, nodeId };
-        prepare.m().size = 4096;
         sendPacket(std::move(prepare));
         transition(NetworkState::WaitingForReady);
         waitingOnAck.begin();

@@ -40,6 +40,21 @@ public:
     }
 };
 
+class DumbNodeCallbacks : public NodeNetworkCallbacks {
+private:
+    lws::CountingReader reader { 4096 };
+
+public:
+    lws::Reader *openReader() override {
+        reader = lws::CountingReader(4096);
+        return &reader;
+    }
+
+    void closeReader(lws::Reader *reader) override {
+    }
+
+};
+
 void setup() {
     Serial.begin(115200);
 
@@ -71,7 +86,9 @@ void setup() {
     radio.setHeaderFrom(0x00);
     radio.setThisAddress(0x00);
 
-    auto protocol = NodeNetworkProtocol{ radio };
+    auto callbacks = DumbNodeCallbacks{};
+
+    auto protocol = NodeNetworkProtocol{ radio, callbacks };
 
     protocol.setNodeId(nodeId);
 
