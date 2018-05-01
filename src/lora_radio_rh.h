@@ -24,41 +24,13 @@ public:
 public:
     bool setup();
     bool sendPacket(LoraPacket &packet) override;
-
-    void waitPacketSent() {
-        rf95.waitPacketSent();
-    }
-
-    bool hasPacket() {
-        if (rf95.mode() != RHGenericDriver::RHMode::RHModeRx) {
-            return false;
-        }
-        return rf95.available();
-    }
-
+    bool hasPacket();
     LoraPacket getLoraPacket();
 
 private:
-    void powerOn() {
-        if (pinEnable > 0) {
-            digitalWrite(pinEnable, HIGH);
-        }
-    }
-
-    void powerOff() {
-        if (pinEnable > 0) {
-            digitalWrite(pinEnable, LOW);
-        }
-    }
-
-    void reset() {
-        if (pinEnable > 0) {
-            powerOff();
-            delay(10);
-            powerOn();
-            delay(10);
-        }
-    }
+    void powerOn();
+    void powerOff();
+    void reset();
 
 public:
     uint8_t getMode() {
@@ -74,7 +46,7 @@ public:
     }
 
     bool isIdle() override {
-        return getMode() == RHGenericDriver::RHMode::RHModeIdle;
+        return getMode() == RHGenericDriver::RHModeIdle;
     }
 
     void sleep() override {

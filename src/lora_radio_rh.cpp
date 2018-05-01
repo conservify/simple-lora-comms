@@ -36,9 +36,41 @@ bool LoraRadioRadioHead::setup() {
     rf95.setModemConfig(RH_RF95::Bw125Cr45Sf128);
     rf95.setModemConfig(RH_RF95::Bw500Cr45Sf128);
     rf95.spiWrite(RH_RF95_REG_23_MAX_PAYLOAD_LENGTH, 0xF2);
+    rf95.setDeferIrqHandling();
 
     available = true;
     return true;
+}
+
+void LoraRadioRadioHead::powerOn() {
+    if (pinEnable > 0) {
+        digitalWrite(pinEnable, HIGH);
+    }
+}
+
+void LoraRadioRadioHead::powerOff() {
+    if (pinEnable > 0) {
+        digitalWrite(pinEnable, LOW);
+    }
+}
+
+void LoraRadioRadioHead::reset() {
+    if (pinEnable > 0) {
+        powerOff();
+        delay(10);
+        powerOn();
+        delay(10);
+    }
+}
+
+bool LoraRadioRadioHead::hasPacket() {
+    rf95.service();
+
+    if (rf95.mode() != RHGenericDriver::RHMode::RHModeRx) {
+        return false;
+    }
+
+    return rf95.available();
 }
 
 bool LoraRadioRadioHead::sendPacket(LoraPacket &packet) {
