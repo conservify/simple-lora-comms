@@ -3,15 +3,18 @@
 
 #include <lwstreams/lwstreams.h>
 
-#include <cstdio>
+#include <experimental/filesystem>
+#include <string>
+#include <iostream>
+#include <fstream>
 
 class FileWriter : public lws::Writer {
 private:
-    const char *fn{ nullptr };
-    FILE *fp{ nullptr };
+    std::experimental::filesystem::path path;
+    std::ofstream of;
 
 public:
-    FileWriter(const char *fn);
+    FileWriter(std::experimental::filesystem::path path);
 
 public:
     bool open();

@@ -2,8 +2,13 @@
 #include <cstdio>
 #include <cassert>
 #include <cstdarg>
-
 #include <unistd.h>
+
+#include <experimental/filesystem>
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
 #include "lora_radio_pi.h"
 #include "gateway_protocol.h"
@@ -13,39 +18,52 @@ constexpr uint8_t PIN_SELECT = 6;
 constexpr uint8_t PIN_DIO_0 = 7;
 constexpr uint8_t PIN_RESET = 0;
 
-void write_pid() {
-    FILE *fp = fopen("/var/run/lora-receiver.pid", "w");
-    fprintf(fp, "%d", getpid());
-    fclose(fp);
-}
+using path = std::experimental::filesystem::path;
 
-class DumbGatewayCallbacks : public GatewayNetworkCallbacks {
+class ArchivingGatewayCallbacks : public GatewayNetworkCallbacks {
+private:
+    std::string archivePath;
+
+public:
+    ArchivingGatewayCallbacks(std::string archivePath) : archivePath(archivePath) {
+    }
+
 public:
     lws::Writer *openWriter(RadioPacket &packet) override {
-        auto writer = new FileWriter("DATA");
-        if (!writer->open()) {
-            delete writer;
-            writer = nullptr;
-        }
-        return writer;
+        auto path = getPath(packet);
+        return new FileWriter(path);
     }
 
     void closeWriter(lws::Writer *writer) override {
+        if (writer != nullptr) {
+            writer->close();
+        }
+    }
+
+private:
+    std::string getNodeId(RadioPacket &packet) {
+        auto& id = packet.getNodeId();
+        std::stringstream ss;
+        for (auto i = 0; i < (int32_t)id.size; ++i) {
+            ss << std::setfill('0') << std::setw(2) << std::hex << (int32_t)id.ptr[i];
+        }
+        return ss.str();
+    }
+
+    path getPath(RadioPacket &packet) {
+        std::time_t t = std::time(nullptr);
+        std::tm tm = *std::localtime(&t);
+        std::stringstream buffer;
+        buffer << archivePath << "/";
+        buffer << getNodeId(packet) << "/";
+        buffer << std::put_time(&tm, "%Y%m%d/%H%M%S") << "/";
+        buffer << "fkn.fkpb";
+        return path{ buffer.str() };
     }
 
 };
 
 int32_t main(int32_t argc, const char **argv) {
-    if (argc > 1) {
-        if (daemon(1, 0) == 0) {
-            chdir(argv[1]);
-            write_pid();
-        }
-        else {
-            return 1;
-        }
-    }
-
     wiringPiSetup();
     wiringPiSPISetup(0, 500000);
 
@@ -55,7 +73,7 @@ int32_t main(int32_t argc, const char **argv) {
     // until you start using the heap, etc...
     radio.setup();
 
-    auto callbacks = DumbGatewayCallbacks{ };
+    auto callbacks = ArchivingGatewayCallbacks{ "./archive" };
     auto protocol = GatewayNetworkProtocol{ radio, callbacks };
 
     while (true) {

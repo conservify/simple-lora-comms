@@ -1,5 +1,4 @@
 #include "gateway_protocol.h"
-#include "file_writer.h"
 
 void GatewayNetworkProtocol::tick() {
     switch (getState()) {
@@ -31,7 +30,9 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
         return;
     }
 
-    slc::log() << "R " << lora.id << " " << packet.m().kind << " " << packet.getNodeId() << " (" << lora.size << " bytes)";
+    auto le = slc::log();
+
+    le << "R " << packet.m().kind << " " << packet.getNodeId() << " " << lora.id << " p(" << lora.size << " bytes)";
 
     switch (getState()) {
     case NetworkState::Listening: {
@@ -58,20 +59,22 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
         case fk_radio_PacketKind_DATA: {
             auto data = packet.data();
             auto dupe = lora.id <= receiveSequence;
+            auto closed = data.size == 0;
             if (!dupe) {
                 if (writer != nullptr) {
-                    if (data.size == 0) {
-                        slc::log() << "R Closed!";
-                    }
-                    else {
+                    if (data.size > 0) {
                         auto written = writer->write(data.ptr, data.size);
                         assert(written == (int32_t)data.size);
+                    }
+                    else {
+                        callbacks->closeWriter(writer);
+                        writer = nullptr;
                     }
                 }
                 totalReceived += data.size;
                 receiveSequence = lora.id;
             }
-            slc::log() << "R " << totalReceived << " " << lora.id << " " << receiveSequence << " " << (dupe ? "DUPE" : "");
+            le << " d(" << totalReceived << " bytes)" << (dupe ? " DUPE" : "") << (closed ? " CLOSED" : "");
             delay(ReplyDelay);
             sendAck(lora.from);
             break;

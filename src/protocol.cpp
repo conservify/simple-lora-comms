@@ -23,7 +23,7 @@ bool NetworkProtocol::sendPacket(RadioPacket &&packet) {
     lora.id = sequence;
     memcpy(lora.data, buffer, stream.bytes_written);
     lora.size = stream.bytes_written;
-    slc::log() << "S " << lora.id << " " << packet.m().kind << " " << packet.getNodeId() << " (" << stream.bytes_written << " bytes)";
+    slc::log() << "S " << packet.m().kind << " " << packet.getNodeId() << " " << lora.id << " (" << stream.bytes_written << " bytes)";
     return radio->sendPacket(lora);
 }
 
