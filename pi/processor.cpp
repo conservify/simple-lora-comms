@@ -22,14 +22,12 @@ public:
             log() << trimmed;
         }
 
-        /*
         if (feof(stream)) {
-            slc::log() << "Command finished successfully";
+            slc::log() << "Command finished";
         }
-        */
 
         auto status = pclose(stream);
-        if (status != -1) {
+        if (status == -1) {
             log() << "Command finished in error";
             return false;
         }
