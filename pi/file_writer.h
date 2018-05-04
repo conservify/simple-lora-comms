@@ -8,19 +8,26 @@
 #include <iostream>
 #include <fstream>
 
+using stdpath = std::experimental::filesystem::path;
+
 class FileWriter : public lws::Writer {
 private:
-    std::experimental::filesystem::path path;
-    std::ofstream of;
+    stdpath path_;
+    std::ofstream of_;
 
 public:
-    FileWriter(std::experimental::filesystem::path path);
+    FileWriter(stdpath path);
 
 public:
     bool open();
     int32_t write(uint8_t *ptr, size_t size) override;
     int32_t write(uint8_t byte) override;
     void close() override;
+
+public:
+    stdpath path() {
+        return path_;
+    }
 
 };
 

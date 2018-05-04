@@ -6,7 +6,7 @@
 class GatewayNetworkCallbacks {
 public:
     virtual lws::Writer *openWriter(RadioPacket &packet) = 0;
-    virtual void closeWriter(lws::Writer *writer) = 0;
+    virtual void closeWriter(lws::Writer *writer, bool success) = 0;
 
 };
 

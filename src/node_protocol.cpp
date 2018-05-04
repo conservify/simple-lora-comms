@@ -93,9 +93,11 @@ void NodeNetworkProtocol::tick() {
             transition(NetworkState::SendClose);
             slc::log() << "Done! waitingOnAck: " << waitingOnAck << " transmitting: " << transmitting;
         }
-        else if (bytes > 0) {
+        else if (bytes >= 0) {
             buffer.position(bytes);
-            transition(NetworkState::SendData);
+            if (bytes > 0) {
+                transition(NetworkState::SendData);
+            }
         }
         break;
     }

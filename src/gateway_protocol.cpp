@@ -47,7 +47,7 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
         case fk_radio_PacketKind_PREPARE: {
             if (writer != nullptr) {
                 writer->close();
-                callbacks->closeWriter(writer);
+                callbacks->closeWriter(writer, false);
             }
             writer = callbacks->openWriter(packet);
             totalReceived = 0;
@@ -67,14 +67,14 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
                         assert(written == (int32_t)data.size);
                     }
                     else {
-                        callbacks->closeWriter(writer);
+                        callbacks->closeWriter(writer, true);
                         writer = nullptr;
                     }
                 }
                 totalReceived += data.size;
                 receiveSequence = lora.id;
             }
-            le << " d(" << totalReceived << " bytes)" << (dupe ? " DUPE" : "") << (closed ? " CLOSED" : "");
+            le << " data(" << data.size << " bytes) total(" << totalReceived << " bytes)" << (dupe ? " DUPE" : "") << (closed ? " CLOSED" : "");
             delay(ReplyDelay);
             sendAck(lora.from);
             break;
