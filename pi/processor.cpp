@@ -5,6 +5,9 @@
 #include "packet_radio.h"
 
 class ProcessMonitor {
+private:
+    Logger log{ "Process "};
+
 public:
     bool runSynchronously(std::string cmdline) {
         auto stream = popen(cmdline.c_str(), "r");
@@ -16,7 +19,7 @@ public:
         while (NULL != fgets(buffer, sizeof(buffer) - 1, stream)) {
             std::string line(buffer);
             auto trimmed = line.substr(0, line.find_last_not_of("\n") + 1);
-            slc::log() << trimmed;
+            log() << trimmed;
         }
 
         /*
@@ -27,7 +30,7 @@ public:
 
         auto status = pclose(stream);
         if (status != -1) {
-            slc::log() << "Command finished in error";
+            log() << "Command finished in error";
             return false;
         }
 

@@ -23,12 +23,19 @@ constexpr uint8_t PIN_RESET = 0;
 
 int32_t main(int32_t argc, const char **argv) {
     auto command = "";
+    auto archive = "./archive";
     for (auto i = 0; i < argc; ++i) {
         auto arg = std::string(argv[i]);
         if (arg == "--command") {
             if (i + 1 < argc) {
                 command = argv[++i];
                 slc::log() << "Using command: " << command;
+            }
+        }
+        if (arg == "--archive") {
+            if (i + 1 < argc) {
+                archive = argv[++i];
+                slc::log() << "Using directory: " << archive;
             }
         }
     }
@@ -43,7 +50,7 @@ int32_t main(int32_t argc, const char **argv) {
     radio.setup();
 
     Processor processor{ command };
-    auto callbacks = ArchivingGatewayCallbacks{ "./archive" };
+    auto callbacks = ArchivingGatewayCallbacks{ archive };
     auto protocol = GatewayNetworkProtocol{ radio, callbacks };
 
     processor.start();
