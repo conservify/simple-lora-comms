@@ -54,8 +54,14 @@ void NodeNetworkProtocol::tick() {
             getRadio()->setModeRx();
         }
         if (inStateFor(ReceiveWindowLength)) {
-            slc::log() << "FAIL!";
-            transition(NetworkState::ListenForSilence);
+            if (retries().canRetry()) {
+                slc::log() << "RETRY!";
+                transition(NetworkState::PingGateway);
+            }
+            else {
+                slc::log() << "FAIL!";
+                transition(NetworkState::SendFailure);
+            }
         }
         break;
     }
