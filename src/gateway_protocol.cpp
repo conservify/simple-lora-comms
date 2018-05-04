@@ -58,7 +58,7 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
         }
         case fk_radio_PacketKind_DATA: {
             auto data = packet.data();
-            auto dupe = lora.id <= receiveSequence;
+            auto dupe = (lora.id != (uint8_t)(receiveSequence + 1));
             auto closed = data.size == 0;
             if (!dupe) {
                 if (writer != nullptr) {
