@@ -32,6 +32,8 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
 
     auto le = slc::log();
 
+    auto otherDevice = activeDeviceId != packet.getNodeId();
+
     le << "R " << packet.m().kind << " " << packet.getNodeId() << " " << lora.id << " p(" << lora.size << " bytes)";
 
     switch (getState()) {
@@ -42,11 +44,16 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
             delay(ReplyDelay);
             auto pong = RadioPacket{ fk_radio_PacketKind_PONG, packet.getNodeId() };
             pong.m().address = nextAddress++;
+            activeDeviceId = packet.getNodeId();
             sendPacket(std::move(pong));
             break;
         }
         case fk_radio_PacketKind_PREPARE: {
+            le << (otherDevice ? " OTHER" : "");
             le.flush();
+            if (otherDevice) {
+                break;
+            }
             if (writer != nullptr) {
                 writer->close();
                 callbacks->closeWriter(writer, false);
@@ -63,6 +70,10 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
             auto data = packet.data();
             auto dupe = (lora.id != (uint8_t)(receiveSequence + 1));
             auto closed = data.size == 0;
+            if (otherDevice) {
+                le << (otherDevice ? " OTHER" : "");
+                break;
+            }
             if (!dupe) {
                 if (writer != nullptr) {
                     if (data.size > 0) {

@@ -13,6 +13,7 @@ public:
 class GatewayNetworkProtocol : public NetworkProtocol {
 private:
     GatewayNetworkCallbacks *callbacks{ nullptr };
+    NodeLoraId activeDeviceId;
     uint8_t nextAddress{ 1 };
     size_t received{ 0 };
     size_t expected{ 0 };
