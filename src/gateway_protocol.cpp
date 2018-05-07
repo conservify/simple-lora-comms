@@ -38,6 +38,7 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
     case NetworkState::Listening: {
         switch (packet.m().kind) {
         case fk_radio_PacketKind_PING: {
+            le.flush();
             delay(ReplyDelay);
             auto pong = RadioPacket{ fk_radio_PacketKind_PONG, packet.getNodeId() };
             pong.m().address = nextAddress++;
@@ -45,12 +46,14 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
             break;
         }
         case fk_radio_PacketKind_PREPARE: {
+            le.flush();
             if (writer != nullptr) {
                 writer->close();
                 callbacks->closeWriter(writer, false);
             }
             writer = callbacks->openWriter(packet);
-            totalReceived = 0;
+            received = 0;
+            expected = packet.m().size;
             receiveSequence = 0;
             delay(ReplyDelay);
             sendAck(lora.from);
@@ -71,10 +74,11 @@ void GatewayNetworkProtocol::push(LoraPacket &lora) {
                         writer = nullptr;
                     }
                 }
-                totalReceived += data.size;
+                received += data.size;
                 receiveSequence = lora.id;
             }
-            le << " data(" << data.size << " bytes) total(" << totalReceived << " bytes)" << (dupe ? " DUPE" : "") << (closed ? " CLOSED" : "");
+            auto mismatch = closed && (received != expected);
+            le << " data(" << data.size << " bytes) total(" << received << "/" << expected << " bytes)" << (dupe ? " DUPE" : "") << (closed ? " CLOSED" : "") << (mismatch ? " MISMATCH" : "");
             delay(ReplyDelay);
             sendAck(lora.from);
             break;

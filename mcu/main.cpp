@@ -45,9 +45,9 @@ private:
     lws::CountingReader reader { 4096 };
 
 public:
-    lws::Reader *openReader() override {
+    NodeNetworkCallbacks::OpenedReader openReader() override {
         reader = lws::CountingReader(4096);
-        return &reader;
+        return NodeNetworkCallbacks::OpenedReader{ &reader, 4096 };
     }
 
     void closeReader(lws::Reader *reader) override {

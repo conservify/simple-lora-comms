@@ -14,7 +14,8 @@ class GatewayNetworkProtocol : public NetworkProtocol {
 private:
     GatewayNetworkCallbacks *callbacks{ nullptr };
     uint8_t nextAddress{ 1 };
-    size_t totalReceived{ 0 };
+    size_t received{ 0 };
+    size_t expected{ 0 };
     uint8_t receiveSequence{ 0 };
     lws::Writer *writer{ nullptr };
 

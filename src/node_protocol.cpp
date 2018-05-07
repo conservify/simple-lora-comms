@@ -69,8 +69,10 @@ void NodeNetworkProtocol::tick() {
         if (reader != nullptr) {
             callbacks->closeReader(reader);
         }
-        reader = callbacks->openReader();
+        auto opened = callbacks->openReader();
         auto prepare = RadioPacket{ fk_radio_PacketKind_PREPARE, nodeId };
+        prepare.m().size = opened.size;
+        reader = opened.reader;
         sendPacket(std::move(prepare));
         transition(NetworkState::WaitingForReady);
         waitingOnAck.begin();

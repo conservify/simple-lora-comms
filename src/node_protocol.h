@@ -23,7 +23,16 @@ struct HoldingBuffer {
 
 class NodeNetworkCallbacks {
 public:
-    virtual lws::Reader *openReader() = 0;
+    struct OpenedReader {
+        lws::Reader *reader;
+        size_t size;
+
+        OpenedReader(lws::Reader *reader, size_t size) : reader(reader), size(size) {
+        }
+    };
+
+public:
+    virtual OpenedReader openReader() = 0;
     virtual void closeReader(lws::Reader *reader) = 0;
 
 };
