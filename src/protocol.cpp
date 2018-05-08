@@ -38,7 +38,9 @@ bool NetworkProtocol::sendAck(uint8_t toAddress) {
 
 void NetworkProtocol::transition(NetworkState newState, uint32_t timer) {
     lastTransitionAt = millis();
-    slc::log() << getStateName(state) << " -> " << getStateName(newState);
+    if (false) {
+        slc::log() << getStateName(state) << " -> " << getStateName(newState);
+    }
     state = newState;
     if (timer > 0) {
         timerDoneAt = millis() + timer;
