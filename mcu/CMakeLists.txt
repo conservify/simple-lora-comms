@@ -1,16 +1,31 @@
-set(ARDUINO_IDE "${CMAKE_CURRENT_SOURCE_DIR}/../../arduino-1.8.3")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/../../arduino-cmake-minimal/cmake/")
+set(CMAKE_MODULE_PATH $ENV{CMAKE_MODULE_PATH})
+
+include(Arduino)
 
 if(EXISTS ${ARDUINO_IDE})
-  include(ArduinoMinimal)
+  enable_arduino_toolchain()
 
   include_directories(../src)
 
-  file(GLOB SOURCE_FILES *.cpp ../src/*.cpp ../src/*.c)
+  file(GLOB sources *.cpp ../src/*.cpp ../src/*.c)
 
-  set(LIBRARIES SPI Wire)
+  find_package(SPI)
+  find_package(Wire)
+  find_package(lwstreams)
+  find_package(arduino-logging)
+  find_package(RadioHead)
+  find_package(nanopb)
 
-  arduino(lora-mcu-test "${SOURCE_FILES}" "${LIBRARIES}")
+  add_arduino_library(lora-mcu-test "${sources}")
+
+  target_link_libraries(lora-mcu-test Wire)
+  target_link_libraries(lora-mcu-test lwstreams)
+  target_link_libraries(lora-mcu-test arduino-logging)
+  target_link_libraries(lora-mcu-test RadioHead)
+  target_link_libraries(lora-mcu-test nanopb)
+  target_link_libraries(lora-mcu-test SPI)
+
+  add_arduino_firmware(lora-mcu-test)
 else()
   message("** [WARN] No Arduino build files found, skipping MCU (${ARDUINO_IDE})")
 endif()
