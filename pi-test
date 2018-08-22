@@ -2,9 +2,13 @@
 
 set -xe
 
+if [[ -z $HOST ]]; then
+    exit 2
+fi
+
 (cd ~/fieldkit/testing && make)
-scp ~/fieldkit/testing/build/linux-arm/fk-data-tool fknatpi:
+scp ~/fieldkit/testing/build/linux-arm/fk-data-tool $HOST:
 
 rsync -zvua --progress ../../conservify/arduino-logging gitdeps
 rsync -zvua --progress ../../fieldkit/lwstreams gitdeps
-rsync -zvua --delete --exclude archive --exclude build ../simple-lora-comms fknatpi: && ssh -tt fknatpi "cd simple-lora-comms && make && build/pi/lora-pi-test --command '~/fk-data-tool --post-stream --host api.fkdev.org --scheme https' --archive '/root/archive'"
+rsync -zvua --delete --exclude archive --exclude build ../simple-lora-comms $HOST: && ssh -tt $HOST "cd simple-lora-comms && make && build/pi/lora-pi-test --command '~/fk-data-tool --post-stream --host api.fkdev.org --scheme https' --archive '/root/archive'"
