@@ -7,7 +7,9 @@ inline int32_t random(int32_t min, int32_t max) {
 #endif
 
 void NodeNetworkProtocol::sendToGateway() {
-    transition(NetworkState::Idle, random(IdleWindowMin, IdleWindowMax));
+    auto delay = random(IdleWindowMin, IdleWindowMax);
+    slc::log() << "Sending: Delay for " << delay;
+    transition(NetworkState::Idle, delay);
 }
 
 void NodeNetworkProtocol::tick() {
