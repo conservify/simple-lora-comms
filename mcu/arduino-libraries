@@ -1,4 +1,4 @@
-../arduino-logging
-../lwstreams
+https://github.com/Conservify/arduino-logging.git *
+https://github.com/Conservify/lwstreams.git *
 https://github.com/Conservify/RadioHead.git 1af5fd0bfa32389d1348114d93e88211f39f4f6c
 https://github.com/nanopb/nanopb.git 2b0db997d7e85b2cc4ae4ee5654e63f6426b18a1
