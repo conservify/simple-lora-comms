@@ -14,7 +14,7 @@ cmake:
 	cd build && cmake ../
 
 gitdeps:
-	simple-deps --config mcu/arduino-libraries
+	simple-deps --config mcu/dependencies.sd
 
 clean:
 	rm -rf build
