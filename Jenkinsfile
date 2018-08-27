@@ -1,7 +1,9 @@
 @Library('conservify') _
 
+conservifyProperties()
+
 timestamps {
     node () {
-        conservifyBuild(name: 'simple-lora-comms', repository: 'https://github.com/Conservify/simple-lora-comms.git')
+        conservifyBuild(name: 'simple-lora-comms')
     }
 }
