@@ -1,6 +1,6 @@
 GO=env GOOS=linux GOARCH=arm go
 
-default: gitdeps protocol cmake
+default: protocol cmake
 	cd build && make
 
 protocol:
@@ -9,7 +9,7 @@ protocol:
 build/golora-arm-test: pi/*.go
 	$(GO) build -o build/golora-arm-test pi/*.go
 
-cmake:
+cmake: gitdeps
 	mkdir -p build
 	cd build && cmake ../
 
