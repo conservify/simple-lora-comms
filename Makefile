@@ -1,10 +1,10 @@
 GO=env GOOS=linux GOARCH=arm go
 
 default: protocol cmake
-	cd build && make
+	$(MAKE) -C build
 
 protocol:
-	cd protocol && make
+	$(MAKE) -C protocol
 
 build/golora-arm-test: pi/*.go
 	$(GO) build -o build/golora-arm-test pi/*.go
